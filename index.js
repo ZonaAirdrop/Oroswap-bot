@@ -1,14 +1,17 @@
 import dotenv from 'dotenv';
 import axios from 'axios';
 import { createInterface } from 'node:readline';
-import { 
-  SigningCosmWasmClient,
-  GasPrice,
-  coins,
-  DirectSecp256k1HdWallet,
-  DirectSecp256k1Wallet
-} from '@cosmjs/cosmwasm-stargate';
-import { Secp256k1 } from '@cosmjs/crypto';
+
+// Impor CosmJS dengan cara yang kompatibel
+import { CosmWasmClient } from '@cosmjs/cosmwasm-stargate';
+import pkg from '@cosmjs/stargate';
+const { GasPrice, coins } = pkg;
+import pkg2 from '@cosmjs/proto-signing';
+const { DirectSecp256k1HdWallet, DirectSecp256k1Wallet } = pkg2;
+import pkg3 from '@cosmjs/crypto';
+const { Secp256k1 } = pkg3;
+
+dotenv.config();
 
 const colors = {
   reset: "\x1b[0m",
