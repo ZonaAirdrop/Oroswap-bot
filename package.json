@@ -1,38 +1,58 @@
 {
   "name": "oroswap-r2-bot",
-  "version": "1.1.0",
-  "description": "Advanced bot for OroSwap with swap and liquidity features",
+  "version": "2.0.0",
+  "description": "Advanced DeFi Bot for OroSwap with Swap and Liquidity Features",
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "start": "node --no-warnings index.js",
-    "dev": "nodemon --experimental-specifier-resolution=node index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node --no-warnings --experimental-vm-modules index.js",
+    "dev": "nodemon --experimental-vm-modules index.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "fix-imports": "node --experimental-modules --experimental-json-modules ./scripts/fix-imports.js"
   },
   "keywords": [
     "oroswap",
-    "zig",
+    "zigchain",
     "cosmwasm",
     "defi",
-    "trading-bot"
+    "trading-bot",
+    "liquidity",
+    "airdrop"
   ],
   "author": "zonaairdrop",
   "license": "LC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ZonaAirdrop/Oroswap-bot.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ZonaAirdrop/Oroswap-bot/issues"
+  },
+  "homepage": "https://github.com/ZonaAirdrop/Oroswap-bot#readme",
   "dependencies": {
     "@cosmjs/cosmwasm-stargate": "^0.32.4",
     "@cosmjs/crypto": "^0.32.4",
     "@cosmjs/proto-signing": "^0.32.4",
     "@cosmjs/stargate": "^0.32.4",
     "axios": "^1.6.2",
+    "chalk": "^5.3.0",
     "dotenv": "^16.3.1",
     "figlet": "^1.8.0",
+    "node-fetch": "^3.3.2",
+    "prompt-sync": "^4.2.0",
     "uuid": "^9.0.1"
   },
   "devDependencies": {
+    "@types/node": "^20.11.0",
     "nodemon": "^3.0.2"
   },
   "engines": {
     "node": ">=18.0.0",
     "npm": ">=9.0.0"
+  },
+  "config": {
+    "cosmjs": {
+      "legacyCommonJS": true
+    }
   }
 }
