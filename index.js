@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 import axios from 'axios';
 import { createInterface } from 'node:readline';
 
-import { CosmWasmClient } from '@cosmjs/cosmwasm-stargate';
+import { CosmWasmClient, SigningCosmWasmClient } from '@cosmjs/cosmwasm-stargate';
 import pkg from '@cosmjs/stargate';
 const { GasPrice, coins } = pkg;
 import pkg2 from '@cosmjs/proto-signing';
