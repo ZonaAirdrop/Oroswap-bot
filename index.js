@@ -204,7 +204,7 @@ const DEFAULT_BELIEF_PRICES = {
   'RYAN/ZIG': "1.0"
 };
 
-const rl = readline.createInterface({
+const rl = createInterface({
   input: process.stdin,
   output: process.stdout,
 });
