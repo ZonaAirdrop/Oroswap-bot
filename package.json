@@ -1,0 +1,27 @@
+{
+  "name": "oroswap Testnet Bot",
+  "version": "1.0.0",
+  "description": "Automated trading bot for OroSwap DEX with swap and liquidity operations",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "author": "zonaairdrop",
+  "license": "LC",
+  "dependencies": {
+    "@cosmjs/cosmwasm-stargate": "^0.32.4",
+    "@cosmjs/crypto": "^0.32.4",
+    "@cosmjs/proto-signing": "^0.32.4",
+    "@cosmjs/stargate": "^0.32.4",
+    "axios": "^1.6.2",
+    "dotenv": "^16.3.1",
+    "readline": "^1.3.0",
+    "blessed": "^0.1.81",
+    "figlet": "^1.8.0",
+    "uuid": "^11.1.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
