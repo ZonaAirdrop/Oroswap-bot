@@ -1,10 +1,22 @@
-require('dotenv').config();
-const axios = require('axios');
-const readline = require('readline');
-const { SigningCosmWasmClient } = require('@cosmjs/cosmwasm-stargate');
-const { GasPrice, coins } = require('@cosmjs/stargate');
-const { DirectSecp256k1HdWallet, DirectSecp256k1Wallet } = require('@cosmjs/proto-signing');
-const { Secp256k1 } = require('@cosmjs/crypto');
+import dotenv from 'dotenv';
+import axios from 'axios';
+import { createInterface } from 'node:readline';
+import { 
+  SigningCosmWasmClient,
+  GasPrice,
+  coins,
+  DirectSecp256k1HdWallet,
+  DirectSecp256k1Wallet
+} from '@cosmjs/cosmwasm-stargate';
+import { Secp256k1 } from '@cosmjs/crypto';
+
+// Inisialisasi
+dotenv.config();
+const rl = createInterface({
+  input: process.stdin,
+  output: process.stdout
+});
+
 
 const colors = {
   reset: "\x1b[0m",
