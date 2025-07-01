@@ -10,14 +10,6 @@ import {
 } from '@cosmjs/cosmwasm-stargate';
 import { Secp256k1 } from '@cosmjs/crypto';
 
-// Inisialisasi
-dotenv.config();
-const rl = createInterface({
-  input: process.stdin,
-  output: process.stdout
-});
-
-
 const colors = {
   reset: "\x1b[0m",
   cyan: "\x1b[36m",
