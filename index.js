@@ -119,11 +119,11 @@ const LIQUIDITY_PAIRS = [
 // Max spread dinamis per pair (bisa diubah sesuai kebutuhan pool!)
 const DEFAULT_MAX_SPREAD = {
   "ORO/ZIG": "0.005",
-  "BEE/ZIG": "0.01",
-  "FOMOFEAST/ZIG": "0.01",
-  "NFA/ZIG": "0.01",
-  "CULTCOIN/ZIG": "0.01",
-  "DYOR/ZIG": "0.01",
+  "BEE/ZIG": "0.02",         // dinaikkan
+  "FOMOFEAST/ZIG": "0.02",   // dinaikkan
+  "NFA/ZIG": "0.02",
+  "CULTCOIN/ZIG": "0.02",
+  "DYOR/ZIG": "0.02",
   "STZIG/ZIG": "0.005"
 };
 
@@ -170,8 +170,8 @@ async function getAccountAddress(wallet) {
 }
 
 function getRandomSwapAmount() {
-  const min = 0.001;
-  const max = 0.002;
+  const min = 0.0005;
+  const max = 0.001;
   return Math.random() * (max - min) + min;
 }
 
