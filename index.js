@@ -53,103 +53,33 @@ const TOKEN_PAIRS = {
     token2: 'uzig'
   },
   'BEE/ZIG': {
-    contract: '', // Add contract address when available
+    contract: 'zig1r50m5lafnmctat4xpvwdpzqndynlxt2skhr4fhzh76u0qar2y9hqu74u5h',
     token1: 'coin.zig1ptxpjgl3lsxrq99zl6ad2nmrx4lhnhne26m6ys.bee',
     token2: 'uzig'
   },
   'FOMOFEAST/ZIG': {
-    contract: '', // Add contract address when available
+    contract: 'zig1unc0549k2f0d7mjjyfm94fuz2x53wrx3px0pr55va27grdgmspcqsp4692',
     token1: 'coin.zig1rl9wxfsuj5fx0tcuvxpcyn3qrw4cc8ahy3jxgp.ufomofeast',
     token2: 'uzig'
   },
   'NFA/ZIG': {
-    contract: '', // Add contract address when available
+    contract: 'zig1dye3zfsn83jmnxqdplkfmelyszhkve9ae6jfxf5mzgqnuylr0sdq8ng9tv',
     token1: 'coin.zig1qaf4dvjt5f8naam2mzpmysjm5e8sp2yhrzex8d.nfa',
     token2: 'uzig'
   },
-  'TEST/ZIG': {
-    contract: '', // Add contract address when available
-    token1: 'coin.zig1avul6jj5lad4dqftgu8yfgkgrhy4u9lwsaj67x.test',
-    token2: 'uzig'
-  },
   'CULTCOIN/ZIG': {
-    contract: '', // Add contract address when available
+    contract: 'zig1j55nw46crxkm03fjdf3cqx3py5cd32jny685x9c3gftfdt2xlvjs63znce',
     token1: 'coin.zig12jgpgq5ec88nwzkkjx7jyrzrljpph5pnags8sn.ucultcoin',
     token2: 'uzig'
   },
-  'PANDAABEFA/ZIG': {
-    contract: '', // Add contract address when available
-    token1: 'coin.zig1t2m3pjlzjejsu7l2z4zczy6t2rzt0qu4ed63um.pandaabefa',
-    token2: 'uzig'
-  },
-  'NT/ZIG': {
-    contract: '', // Add contract address when available
-    token1: 'coin.zig1a3ecawtdl4y72f0j3rryuw6srphuqctu22mtd8.newtoken',
-    token2: 'uzig'
-  },
   'DYOR/ZIG': {
-    contract: '', // Add contract address when available
+    contract: 'zig1us8t6pklp2v2pjqnnedg9wnp3pv50kl448csv0lsuad599ef56jsyvakl9',
     token1: 'coin.zig1fepzhtkq2r5gc4prq94yukg6vaqjvkam27gwk3.dyor',
     token2: 'uzig'
   },
-  'UNIT-ZIG/ZIG': {
-    contract: '', // Add contract address when available
-    token1: 'ibc/B6863C1B541063B17C757293EC2E45BD2984AAC8CADD5ED7EDC2DA58B99445DC',
-    token2: 'uzig'
-  },
-  'UDYOR/ZIG': {
-    contract: '', // Add contract address when available
-    token1: 'coin.zig1wg4d2l295cuhq5m3m8uuwfw7qe0syskq077qkx.udyor',
-    token2: 'uzig'
-  },
-  'PANDABAFC/ZIG': {
-    contract: '', // Add contract address when available
-    token1: 'coin.zig1v6q4m8u95hwghzskk59a79gk5zymfp263vkyec.pandabafc',
-    token2: 'uzig'
-  },
-  'SHITTY/ZIG': {
-    contract: '', // Add contract address when available
-    token1: 'coin.zig10xvc3tkqrdyym6ep9lrt5005mrwvw6rml66qv7jxwnzlpqfmw7ksq7n7nm.customone',
-    token2: 'uzig'
-  },
-  'IMAGE/ZIG': {
-    contract: '', // Add contract address when available
-    token1: 'coin.zig10xvc3tkqrdyym6ep9lrt5005mrwvw6rml66qv7jxwnzlpqfmw7ksq7n7nm.times',
-    token2: 'uzig'
-  },
-  'HOHOHOH/ZIG': {
-    contract: '', // Add contract address when available
-    token1: 'coin.zig1ela5wdznypq8fhf4lnqg90z2lk7376aunptf6slegrs60vlfyusq9rz73g.hahahah',
-    token2: 'uzig'
-  },
-  'BASICA/ZIG': {
-    contract: '', // Add contract address when available
-    token1: 'coin.zig10xvc3tkqrdyym6ep9lrt5005mrwvw6rml66qv7jxwnzlpqfmw7ksq7n7nm.alphaaa',
-    token2: 'uzig'
-  },
-  'MARKETPLACE/ZIG': {
-    contract: '', // Add contract address when available
-    token1: 'coin.zig10xvc3tkqrdyym6ep9lrt5005mrwvw6rml66qv7jxwnzlpqfmw7ksq7n7nm.customtoken',
-    token2: 'uzig'
-  },
-  'PENCIL/ZIG': {
-    contract: '', // Add contract address when available
-    token1: 'coin.zig10xvc3tkqrdyym6ep9lrt5005mrwvw6rml66qv7jxwnzlpqfmw7ksq7n7nm.cancel',
-    token2: 'uzig'
-  },
-  'MES/ZIG': {
-    contract: '', // Add contract address when available
-    token1: 'coin.zig1h48qf2nv8kw2a6uc6lm0sey7tzp5asqhf8jtd3.messi',
-    token2: 'uzig'
-  },
-  'RON/ZIG': {
-    contract: '', // Add contract address when available
-    token1: 'coin.zig1h48qf2nv8kw2a6uc6lm0sey7tzp5asqhf8jtd3.ronaldo',
-    token2: 'uzig'
-  },
-  'RYAN/ZIG': {
-    contract: '', // Add contract address when available
-    token1: 'coin.zig15ztppgc8859ramweldxdmcf7fa5y6kzs5lewfd.uryan',
+  'STZIG/ZIG': {
+    contract: 'zig19zqxslng99gw98ku3dyqaqy0c809kwssw7nzhea9x40jwxjugqvs5xaghj',
+    token1: '
     token2: 'uzig'
   }
 };
@@ -184,7 +114,6 @@ const DEFAULT_BELIEF_PRICES = {
   'BEE/ZIG': "1.0",
   'FOMOFEAST/ZIG': "1.0",
   'NFA/ZIG': "1.0",
-  'TEST/ZIG': "1.0",
   'CULTCOIN/ZIG': "1.0",
   'PANDAABEFA/ZIG': "1.0",
   'NT/ZIG': "1.0",
