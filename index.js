@@ -117,11 +117,10 @@ const LIQUIDITY_PAIRS = [
   'STZIG/ZIG'
 ];
 
-// Max spread dinamis per pair (bisa diubah sesuai kebutuhan pool!)
 const DEFAULT_MAX_SPREAD = {
   "ORO/ZIG": "0.005",
-  "BEE/ZIG": "0.02",         // dinaikkan
-  "FOMOFEAST/ZIG": "0.02",   // dinaikkan
+  "BEE/ZIG": "0.02",
+  "FOMOFEAST/ZIG": "0.02",
   "NFA/ZIG": "0.02",
   "CULTCOIN/ZIG": "0.02",
   "DYOR/ZIG": "0.02",
@@ -191,6 +190,24 @@ async function getPoolInfo(contractAddress) {
   }
 }
 
+// Tambahan: Cek pool liquidity sebelum swap, auto-skip pool kosong/tipis
+async function canSwap(pairName, fromDenom, amount) {
+  const pair = TOKEN_PAIRS[pairName];
+  const poolInfo = await getPoolInfo(pair.contract);
+  if (!poolInfo) {
+    logger.warn(`[!] Tidak bisa cek pool info untuk ${pairName}, swap di-skip.`);
+    return false;
+  }
+  const asset = poolInfo.assets.find(a => a.info.native_token?.denom === fromDenom);
+  const poolBalance = asset ? parseFloat(asset.amount) / Math.pow(10, TOKEN_DECIMALS[fromDenom]) : 0;
+  // Swap hanya jika pool balance > 10x amount swap (bisa diubah sesuai selera)
+  if (poolBalance <= 10 * amount) {
+    logger.warn(`[!] Pool ${pairName} terlalu kecil (${poolBalance} ${fromDenom}), skip swap.`);
+    return false;
+  }
+  return true;
+}
+
 // Saldo langsung node (ANTI 403)
 async function getBalance(address, denom) {
   try {
@@ -244,6 +261,11 @@ async function performSwap(wallet, address, amount, pairName, swapNumber, fromDe
     const balance = await getBalance(address, fromDenom);
     if (balance < amount) {
       logger.warn(`[!] Skip swap ${swapNumber}: saldo ${fromDenom} (${balance}) kurang dari swap (${amount})`);
+      return null;
+    }
+    // Cek pool liquidity sebelum swap
+    if (!(await canSwap(pairName, fromDenom, amount))) {
+      logger.warn(`[!] Skip swap ${swapNumber}: pool terlalu kecil untuk swap.`);
       return null;
     }
     const client = await SigningCosmWasmClient.connectWithSigner(RPC_URL, wallet, { gasPrice: GAS_PRICE });
