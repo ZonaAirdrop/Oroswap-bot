@@ -79,7 +79,7 @@ const TOKEN_PAIRS = {
   },
   'STZIG/ZIG': {
     contract: 'zig19zqxslng99gw98ku3dyqaqy0c809kwssw7nzhea9x40jwxjugqvs5xaghj',
-    token1: '
+    token1: 'coin.zig1f6dk5csplyvyqvk7uvtsf8yll82lxzmquzctw7wvwajn2a7emmeqzzgvly',
     token2: 'uzig'
   }
 };
