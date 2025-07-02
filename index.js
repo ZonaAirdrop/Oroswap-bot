@@ -42,32 +42,18 @@ const API_URL = 'https://testnet-api.oroswap.org/api/';
 const EXPLORER_URL = 'https://zigscan.org/tx/';
 const GAS_PRICE = GasPrice.fromString('0.025uzig');
 
-// Mapping denom ke nama token
+// Only token aktif: ZIG, ORO, NFA, CULTCOIN
 const TOKEN_SYMBOLS = {
   'uzig': 'ZIG',
   'coin.zig10rfjm85jmzfhravjwpq3hcdz8ngxg7lxd0drkr.uoro': 'ORO',
-  'coin.zig1ptxpjgl3lsxrq99zl6ad2nmrx4lhnhne26m6ys.bee': 'BEE',
-  'coin.zig1rl9wxfsuj5fx0tcuvxpcyn3qrw4cc8ahy3jxgp.ufomofeast': 'FOMOFEAST',
   'coin.zig1qaf4dvjt5f8naam2mzpmysjm5e8sp2yhrzex8d.nfa': 'NFA',
   'coin.zig12jgpgq5ec88nwzkkjx7jyrzrljpph5pnags8sn.ucultcoin': 'CULTCOIN',
-  'coin.zig1fepzhtkq2r5gc4prq94yukg6vaqjvkam27gwk3.dyor': 'DYOR',
-  'coin.zig1f6dk5csplyvyqvk7uvtsf8yll82lxzmquzctw7wvwajn2a7emmeqzzgvly': 'STZIG'
 };
 
 const TOKEN_PAIRS = {
   'ORO/ZIG': {
     contract: 'zig15jqg0hmp9n06q0as7uk3x9xkwr9k3r7yh4ww2uc0hek8zlryrgmsamk4qg',
     token1: 'coin.zig10rfjm85jmzfhravjwpq3hcdz8ngxg7lxd0drkr.uoro',
-    token2: 'uzig'
-  },
-  'BEE/ZIG': {
-    contract: 'zig1r50m5lafnmctat4xpvwdpzqndynlxt2skhr4fhzh76u0qar2y9hqu74u5h',
-    token1: 'coin.zig1ptxpjgl3lsxrq99zl6ad2nmrx4lhnhne26m6ys.bee',
-    token2: 'uzig'
-  },
-  'FOMOFEAST/ZIG': {
-    contract: 'zig1unc0549k2f0d7mjjyfm94fuz2x53wrx3px0pr55va27grdgmspcqsp4692',
-    token1: 'coin.zig1rl9wxfsuj5fx0tcuvxpcyn3qrw4cc8ahy3jxgp.ufomofeast',
     token2: 'uzig'
   },
   'NFA/ZIG': {
@@ -79,55 +65,30 @@ const TOKEN_PAIRS = {
     contract: 'zig1j55nw46crxkm03fjdf3cqx3py5cd32jny685x9c3gftfdt2xlvjs63znce',
     token1: 'coin.zig12jgpgq5ec88nwzkkjx7jyrzrljpph5pnags8sn.ucultcoin',
     token2: 'uzig'
-  },
-  'DYOR/ZIG': {
-    contract: 'zig1us8t6pklp2v2pjqnnedg9wnp3pv50kl448csv0lsuad599ef56jsyvakl9',
-    token1: 'coin.zig1fepzhtkq2r5gc4prq94yukg6vaqjvkam27gwk3.dyor',
-    token2: 'uzig'
-  },
-  'STZIG/ZIG': {
-    contract: 'zig19zqxslng99gw98ku3dyqaqy0c809kwssw7nzhea9x40jwxjugqvs5xaghj',
-    token1: 'coin.zig1f6dk5csplyvyqvk7uvtsf8yll82lxzmquzctw7wvwajn2a7emmeqzzgvly',
-    token2: 'uzig'
   }
 };
 
+// Token decimals
 const TOKEN_DECIMALS = {
   'uzig': 6,
   'coin.zig10rfjm85jmzfhravjwpq3hcdz8ngxg7lxd0drkr.uoro': 6,
-  'coin.zig1ptxpjgl3lsxrq99zl6ad2nmrx4lhnhne26m6ys.bee': 6,
-  'coin.zig1rl9wxfsuj5fx0tcuvxpcyn3qrw4cc8ahy3jxgp.ufomofeast': 6,
   'coin.zig1qaf4dvjt5f8naam2mzpmysjm5e8sp2yhrzex8d.nfa': 6,
   'coin.zig12jgpgq5ec88nwzkkjx7jyrzrljpph5pnags8sn.ucultcoin': 6,
-  'coin.zig1fepzhtkq2r5gc4prq94yukg6vaqjvkam27gwk3.dyor': 6,
-  'coin.zig1f6dk5csplyvyqvk7uvtsf8yll82lxzmquzctw7wvwajn2a7emmeqzzgvly': 6,
 };
 
+// ONLY swap ke: ORO, NFA, CULTCOIN
 const SWAP_SEQUENCE = [
   { from: 'uzig', to: 'coin.zig10rfjm85jmzfhravjwpq3hcdz8ngxg7lxd0drkr.uoro', pair: 'ORO/ZIG' },
-  { from: 'uzig', to: 'coin.zig1ptxpjgl3lsxrq99zl6ad2nmrx4lhnhne26m6ys.bee', pair: 'BEE/ZIG' },
-  { from: 'uzig', to: 'coin.zig1rl9wxfsuj5fx0tcuvxpcyn3qrw4cc8ahy3jxgp.ufomofeast', pair: 'FOMOFEAST/ZIG' },
   { from: 'uzig', to: 'coin.zig1qaf4dvjt5f8naam2mzpmysjm5e8sp2yhrzex8d.nfa', pair: 'NFA/ZIG' },
   { from: 'uzig', to: 'coin.zig12jgpgq5ec88nwzkkjx7jyrzrljpph5pnags8sn.ucultcoin', pair: 'CULTCOIN/ZIG' },
-  { from: 'uzig', to: 'coin.zig1fepzhtkq2r5gc4prq94yukg6vaqjvkam27gwk3.dyor', pair: 'DYOR/ZIG' },
-  { from: 'uzig', to: 'coin.zig1f6dk5csplyvyqvk7uvtsf8yll82lxzmquzctw7wvwajn2a7emmeqzzgvly', pair: 'STZIG/ZIG' }
 ];
 
+// ONLY liquidity ke: ORO/ZIG, NFA/ZIG, CULTCOIN/ZIG
 const LIQUIDITY_PAIRS = [
   'ORO/ZIG',
-  'BEE/ZIG',
-  'FOMOFEAST/ZIG',
   'NFA/ZIG',
-  'CULTCOIN/ZIG',
-  'DYOR/ZIG',
-  'STZIG/ZIG'
+  'CULTCOIN/ZIG'
 ];
-
-function getRandomMaxSpread() {
-  const min = 0.005;
-  const max = 0.05;
-  return (Math.random() * (max - min) + min).toFixed(3);
-}
 
 const rl = createInterface({
   input: process.stdin,
@@ -219,14 +180,16 @@ async function getBalance(address, denom) {
   }
 }
 
-async function getUserInfo(walletAddress) {
+async function getUserPoints(address) {
   try {
-    const response = await fetch(`${API_URL}user/${walletAddress}`);
-    if (!response.ok) return null;
+    const response = await fetch(`${API_URL}user/${address}`);
+    if (!response.ok) return 0;
     const data = await response.json();
-    return data;
+    if (data && typeof data.point !== 'undefined') return data.point;
+    if (data && data.data && typeof data.data.point !== 'undefined') return data.data.point;
+    return 0;
   } catch (e) {
-    return null;
+    return 0;
   }
 }
 
@@ -239,16 +202,10 @@ async function getAllBalances(address) {
   return balances;
 }
 
-// Print info wallet: points, saldo (rapih)
 async function printWalletInfo(address) {
-  const userInfo = await getUserInfo(address);
-  let points = 0;
-  if (userInfo && userInfo.data && userInfo.data.point) {
-    points = userInfo.data.point;
-  }
+  const points = await getUserPoints(address);
   logger.info(`Wallet: ${address}`);
   logger.info(`Points: ${points}`);
-
   const balances = await getAllBalances(address);
   let balanceStr = '[✓] Balance: ';
   for (const denom of Object.keys(TOKEN_SYMBOLS)) {
@@ -311,7 +268,8 @@ async function performSwap(wallet, address, amount, pairName, swapNumber, fromDe
     const microAmount = toMicroUnits(amount, fromDenom);
     const poolInfo = await getPoolInfo(pair.contract);
     const beliefPrice = calculateBeliefPrice(poolInfo, pairName, fromDenom);
-    const maxSpread = getRandomMaxSpread();
+    // max_spread dihapus (default ke 0.01 jika diperlukan)
+    const maxSpread = "0.01";
     const msg = {
       swap: {
         belief_price: beliefPrice,
