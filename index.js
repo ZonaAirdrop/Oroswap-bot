@@ -304,31 +304,52 @@ async function addLiquidity(wallet, address, pairName) {
       logger.error(`Contract address not set for ${pairName}`);
       return null;
     }
+    // Ambil saldo token & ZIG
     const saldoToken1 = await getBalance(address, pair.token1);
-    const saldoZig = await getBalance(address, 'uzig');
-    if (saldoToken1 < 1 || saldoZig < 0.1) {
+    const saldoZIG = await getBalance(address, 'uzig');
+    if (saldoToken1 === 0 || saldoZIG === 0) {
       logger.warn(`Skip add liquidity ${pairName}: saldo kurang`);
       return null;
     }
-    const client = await SigningCosmWasmClient.connectWithSigner(RPC_URL, wallet, { gasPrice: GAS_PRICE });
-    const token1Amount = 1;
-    const zigAmount = 0.1;
-    const microAmountToken1 = toMicroUnits(token1Amount, pair.token1);
-    const microAmountZIG = toMicroUnits(zigAmount, 'uzig');
+    // Ambil 50% masing-masing
+    const token1Amount = saldoToken1 * 0.5;
+    const zigAmount = saldoZIG * 0.5;
+    // Dapatkan info pool untuk tahu rasio ideal
+    const poolInfo = await getPoolInfo(pair.contract);
+    if (!poolInfo) {
+      logger.warn(`Skip add liquidity ${pairName}: pool info tidak didapat`);
+      return null;
+    }
+    const poolToken1 = parseFloat(poolInfo.assets[0].amount) / Math.pow(10, TOKEN_DECIMALS[pair.token1]);
+    const poolZIG = parseFloat(poolInfo.assets[1].amount) / Math.pow(10, TOKEN_DECIMALS['uzig']);
+    // Hitung rasio pool
+    const ratio = poolToken1 / poolZIG;
+    // Agar tidak kelebihan: sesuaikan amount berdasarkan rasio pool
+    let adjustedToken1 = token1Amount;
+    let adjustedZIG = zigAmount;
+    if (token1Amount / zigAmount > ratio) {
+      adjustedToken1 = zigAmount * ratio;
+    } else {
+      adjustedZIG = token1Amount / ratio;
+    }
+    // Buat micro amount
+    const microAmountToken1 = toMicroUnits(adjustedToken1, pair.token1);
+    const microAmountZIG = toMicroUnits(adjustedZIG, 'uzig');
     const msg = {
       provide_liquidity: {
         assets: [
           { amount: microAmountToken1.toString(), info: { native_token: { denom: pair.token1 } } },
           { amount: microAmountZIG.toString(), info: { native_token: { denom: 'uzig' } } },
         ],
-        slippage_tolerance: "1",
+        slippage_tolerance: "0.05",
       },
     };
     const funds = [
       { denom: pair.token1, amount: microAmountToken1.toString() },
       { denom: 'uzig', amount: microAmountZIG.toString() }
     ];
-    logger.loading(`Adding liquidity: ${token1Amount} ${pairName.split('/')[0]} + ${zigAmount} ZIG`);
+    logger.loading(`Adding liquidity (50%): ${adjustedToken1.toFixed(6)} ${pair.token1} + ${adjustedZIG.toFixed(6)} ZIG`);
+    const client = await SigningCosmWasmClient.connectWithSigner(RPC_URL, wallet, { gasPrice: GAS_PRICE });
     const result = await client.execute(address, pair.contract, msg, 'auto', `Adding ${pairName} Liquidity`, funds);
     logger.success(`Liquidity added for ${pairName}! Tx: ${EXPLORER_URL}${result.transactionHash}`);
     return result;
