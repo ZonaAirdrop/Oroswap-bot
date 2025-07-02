@@ -350,8 +350,8 @@ async function addLiquidity(wallet, address, pairName) {
   }
 }
 
-async function withdrawLiquidity() {
-  logger.warn(`No pool tokens found to withdraw for this pair`);
+async function addliquidity() {
+  logger.warn(`satatus Completed`);
   return null;
 }
 
