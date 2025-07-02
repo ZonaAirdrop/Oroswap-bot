@@ -162,7 +162,7 @@ async function getAccountAddress(wallet) {
 }
 
 function getRandomSwapAmount() {
-  const min = 0.0005;
+  const min = 0.002;
   const max = 0.001;
   return Math.random() * (max - min) + min;
 }
@@ -322,14 +322,14 @@ async function addLiquidity(wallet, address, pairName) {
           { amount: microAmountToken1.toString(), info: { native_token: { denom: pair.token1 } } },
           { amount: microAmountZIG.toString(), info: { native_token: { denom: 'uzig' } } },
         ],
-        slippage_tolerance: "0.05",
+        slippage_tolerance: "0.5",
       },
     };
     const funds = [
       { denom: pair.token1, amount: microAmountToken1.toString() },
       { denom: 'uzig', amount: microAmountZIG.toString() }
     ];
-    logger.loading(`Adding liquidity (50%): ${adjustedToken1.toFixed(6)} ${pair.token1} + ${adjustedZIG.toFixed(6)} ZIG`);
+    logger.loading(`Adding liquidity (20%): ${adjustedToken1.toFixed(6)} ${pair.token1} + ${adjustedZIG.toFixed(6)} ZIG`);
     const client = await SigningCosmWasmClient.connectWithSigner(RPC_URL, wallet, { gasPrice: GAS_PRICE });
     const result = await client.execute(address, pair.contract, msg, 'auto', `Adding ${pairName} Liquidity`, funds);
     logger.success(`Liquidity added for ${pairName}! Tx: ${EXPLORER_URL}${result.transactionHash}`);
@@ -347,7 +347,7 @@ async function withdrawLiquidity() {
 
 function displayCountdown(hours, minutes, seconds) {
   const timeStr = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-  process.stdout.write(`\r${colors.cyan}[⏰] Next execution in: ${timeStr}${colors.reset}`);
+  process.stdout.write(`\r${colors.cyan}[🧭] Next execution in: ${timeStr}${colors.reset}`);
 }
 
 async function executeTransactionCycle(
@@ -440,7 +440,7 @@ async function startDailyCountdown(
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
     console.log('\n');
-    logger.success('⏰ 24 hours completed! Starting new transaction cycle...\n');
+    logger.success('🧭 24 hours completed! Starting new transaction cycle...\n');
     await executeAllWallets(
       keys,
       numSwaps,
