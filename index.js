@@ -128,7 +128,7 @@ function isValidNumber(input) {
 
 function toMicroUnits(amount, denom) {
   const decimals = TOKEN_DECIMALS[denom] || 6;
-  return Math.floor(parseFloat(amount) * Math.pow(10, decimals);
+  return Math.floor(parseFloat(amount) * Math.pow(10, decimals));
 }
 
 function isMnemonic(input) {
