@@ -38,7 +38,6 @@ const logger = {
 };
 
 const RPC_URL = 'https://rpc.zigscan.net/';
-const API_URL = 'https://testnet-api.oroswap.org/api/';
 const EXPLORER_URL = 'https://zigscan.org/tx/';
 const GAS_PRICE = GasPrice.fromString('0.025uzig');
 
@@ -189,7 +188,18 @@ async function getPoolInfo(contractAddress) {
   }
 }
 
-// Belief price always from pool (real-time), fallback to "1" if cannot fetch
+// --- getBalance langsung ke node, ANTI 403 ---
+async function getBalance(address, denom) {
+  try {
+    const client = await SigningCosmWasmClient.connect(RPC_URL);
+    const bal = await client.getBalance(address, denom);
+    return bal && bal.amount ? parseFloat(bal.amount) / Math.pow(10, TOKEN_DECIMALS[denom] || 6) : 0;
+  } catch (e) {
+    logger.error("Gagal getBalance: " + e.message);
+    return 0;
+  }
+}
+
 function calculateBeliefPrice(poolInfo, pairName, fromDenom) {
   try {
     if (!poolInfo || !poolInfo.assets || poolInfo.assets.length !== 2) {
@@ -217,18 +227,6 @@ function calculateBeliefPrice(poolInfo, pairName, fromDenom) {
   } catch (err) {
     logger.warn(`Belief price fallback to 1 for ${pairName}`);
     return "1";
-  }
-}
-
-async function getBalance(address, denom) {
-  try {
-    const res = await axios.get(`${API_URL}portfolio/${address}`);
-    const coins = res.data.coins || [];
-    const entry = coins.find(c => c.denom === denom);
-    return entry ? parseFloat(entry.amount) / Math.pow(10, TOKEN_DECIMALS[denom] || 6) : 0;
-  } catch (e) {
-    logger.error("Gagal getBalance: " + e.message);
-    return 0;
   }
 }
 
@@ -315,53 +313,18 @@ async function addLiquidity(wallet, address, pairName) {
   }
 }
 
+// Pool token balance (LP token) dari node bukan API explorer, jadi skip withdrawLiquidity jika tidak yakin
 async function getPoolTokenBalance(address, pairName) {
-  try {
-    const response = await axios.get(`${API_URL}portfolio/${address}`);
-    const poolTokens = response.data.pool_tokens;
-    const targetPool = poolTokens.find(pool =>
-      pool.pair_contract_address === TOKEN_PAIRS[pairName].contract ||
-      pool.name === pairName
-    );
-    if (targetPool) {
-      return {
-        amount: targetPool.amount,
-        denom: targetPool.denom
-      };
-    }
-    return null;
-  } catch {
-    return null;
-  }
+  return null; // Kosong, karena LP token balance dari node perlu implementasi query contract khusus
 }
 
 async function withdrawLiquidity(wallet, address, pairName) {
-  try {
-    const poolToken = await getPoolTokenBalance(address, pairName);
-    if (!poolToken || !poolToken.amount || parseFloat(poolToken.amount) < 1) {
-      logger.warn(`No pool tokens found to withdraw for ${pairName}`);
-      return null;
-    }
-    const client = await SigningCosmWasmClient.connectWithSigner(RPC_URL, wallet, { gasPrice: GAS_PRICE });
-    const msg = { withdraw_liquidity: {} };
-    const funds = coins(poolToken.amount, poolToken.denom);
-    logger.loading(`Withdrawing liquidity: ${poolToken.amount} LP tokens for ${pairName}`);
-    const result = await client.execute(address, TOKEN_PAIRS[pairName].contract, msg, 'auto', `Removing ${pairName} Liquidity`, funds);
-    logger.success(`Liquidity withdrawn for ${pairName}! Tx: ${EXPLORER_URL}${result.transactionHash}`);
-    return result;
-  } catch (error) {
-    logger.error(`Withdraw liquidity failed for ${pairName}: ${error.message}`);
-    return null;
-  }
+  logger.warn(`No pool tokens found to withdraw for ${pairName}`);
+  return null;
 }
 
 async function getPoints(address) {
-  try {
-    const response = await axios.get(`${API_URL}portfolio/${address}/points`);
-    return response.data.points[0];
-  } catch {
-    return null;
-  }
+  return null; // Skipped, tidak ada cara stabil ambil points selain explorer
 }
 
 function displayCountdown(hours, minutes, seconds) {
@@ -397,10 +360,7 @@ async function executeTransactionCycle(
     await new Promise(resolve => setTimeout(resolve, liquidityDelay * 1000));
     await withdrawLiquidity(wallet, address, pairName);
   }
-  const points = await getPoints(address);
-  if (points) {
-    logger.info(`Points: ${points.points} (Swaps: ${points.swaps_count}, Pools: ${points.join_pool_count})`);
-  }
+  logger.info(`Transaction cycle finished for wallet ${walletNumber}`);
   console.log();
 }
 
