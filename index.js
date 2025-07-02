@@ -109,15 +109,12 @@ const LIQUIDITY_PAIRS = [
   'STZIG/ZIG'
 ];
 
-const DEFAULT_MAX_SPREAD = {
-  "ORO/ZIG": "0.005",
-  "BEE/ZIG": "0.04",
-  "FOMOFEAST/ZIG": "0.005",
-  "NFA/ZIG": "0.005",
-  "CULTCOIN/ZIG": "0.005",
-  "DYOR/ZIG": "0.02",
-  "STZIG/ZIG": "0.03"
-};
+// RANDOM max_spread function
+function getRandomMaxSpread() {
+  const min = 0.005;
+  const max = 2.0;
+  return (Math.random() * (max - min) + min).toFixed(3);
+}
 
 const rl = createInterface({
   input: process.stdin,
@@ -162,8 +159,8 @@ async function getAccountAddress(wallet) {
 }
 
 function getRandomSwapAmount() {
-  const min = 0.002;
-  const max = 0.001;
+  const min = 0.0005;
+  const max = 0.002;
   return Math.random() * (max - min) + min;
 }
 
@@ -206,6 +203,18 @@ async function getBalance(address, denom) {
   } catch (e) {
     logger.error("Gagal getBalance: " + e.message);
     return 0;
+  }
+}
+
+// Ambil info user & points dari API Oroswap
+async function getUserInfo(walletAddress) {
+  try {
+    const response = await fetch(`${API_URL}user/${walletAddress}`);
+    if (!response.ok) return null;
+    const data = await response.json();
+    return data;
+  } catch (e) {
+    return null;
   }
 }
 
@@ -259,7 +268,7 @@ async function performSwap(wallet, address, amount, pairName, swapNumber, fromDe
     const microAmount = toMicroUnits(amount, fromDenom);
     const poolInfo = await getPoolInfo(pair.contract);
     const beliefPrice = calculateBeliefPrice(poolInfo, pairName, fromDenom);
-    const maxSpread = DEFAULT_MAX_SPREAD[pairName] || "0.01";
+    const maxSpread = getRandomMaxSpread();
     const msg = {
       swap: {
         belief_price: beliefPrice,
@@ -274,6 +283,7 @@ async function performSwap(wallet, address, amount, pairName, swapNumber, fromDe
     const fromSymbol = fromDenom === 'uzig' ? "ZIG" : pairName.split('/')[0];
     const toSymbol = toDenom === 'uzig' ? "ZIG" : pairName.split('/')[0];
 
+    logger.info(`Max spread swap: ${maxSpread}`);
     logger.loading(`Swap ${swapNumber}: ${amount.toFixed(5)} ${fromSymbol} -> ${toSymbol}`);
     const result = await client.execute(address, pair.contract, msg, 'auto', 'Swap', funds);
     logger.success(`Swap ${swapNumber} completed! Tx: ${EXPLORER_URL}${result.transactionHash}`);
@@ -362,6 +372,14 @@ async function executeTransactionCycle(
   liquidityMaxDelay
 ) {
   logger.step(`--- Transaction For Wallet ${walletNumber} ---`);
+  // User info & points
+  const userInfo = await getUserInfo(address);
+  if (userInfo && userInfo.data) {
+    logger.info(`Wallet: ${address} | Username: ${userInfo.data.username || '-'} | Points: ${userInfo.data.point || 0}`);
+  } else {
+    logger.info(`Wallet: ${address}`);
+  }
+
   let swapNo = 1;
   for (let i = 0; i < numSwaps; i++) {
     const idx = i % SWAP_SEQUENCE.length;
