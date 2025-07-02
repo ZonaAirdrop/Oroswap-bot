@@ -40,7 +40,6 @@ const API_URL = 'https://testnet-api.oroswap.org/api/';
 const EXPLORER_URL = 'https://zigscan.org/tx/';
 const GAS_PRICE = GasPrice.fromString('0.025uzig');
 
-// Token contracts and pairs
 const TOKEN_PAIRS = {
   'ORO/ZIG': {
     contract: 'zig15jqg0hmp9n06q0as7uk3x9xkwr9k3r7yh4ww2uc0hek8zlryrgmsamk4qg',
@@ -91,20 +90,13 @@ const TOKEN_DECIMALS = {
 };
 
 const SWAP_SEQUENCE = [
-  { from: 'coin.zig10rfjm85jmzfhravjwpq3hcdz8ngxg7lxd0drkr.uoro', to: 'uzig', pair: 'ORO/ZIG' },
   { from: 'uzig', to: 'coin.zig10rfjm85jmzfhravjwpq3hcdz8ngxg7lxd0drkr.uoro', pair: 'ORO/ZIG' },
   { from: 'uzig', to: 'coin.zig1ptxpjgl3lsxrq99zl6ad2nmrx4lhnhne26m6ys.bee', pair: 'BEE/ZIG' },
-  { from: 'coin.zig1ptxpjgl3lsxrq99zl6ad2nmrx4lhnhne26m6ys.bee', to: 'uzig', pair: 'BEE/ZIG' },
   { from: 'uzig', to: 'coin.zig1rl9wxfsuj5fx0tcuvxpcyn3qrw4cc8ahy3jxgp.ufomofeast', pair: 'FOMOFEAST/ZIG' },
-  { from: 'coin.zig1rl9wxfsuj5fx0tcuvxpcyn3qrw4cc8ahy3jxgp.ufomofeast', to: 'uzig', pair: 'FOMOFEAST/ZIG' },
   { from: 'uzig', to: 'coin.zig1qaf4dvjt5f8naam2mzpmysjm5e8sp2yhrzex8d.nfa', pair: 'NFA/ZIG' },
-  { from: 'coin.zig1qaf4dvjt5f8naam2mzpmysjm5e8sp2yhrzex8d.nfa', to: 'uzig', pair: 'NFA/ZIG' },
   { from: 'uzig', to: 'coin.zig12jgpgq5ec88nwzkkjx7jyrzrljpph5pnags8sn.ucultcoin', pair: 'CULTCOIN/ZIG' },
-  { from: 'coin.zig12jgpgq5ec88nwzkkjx7jyrzrljpph5pnags8sn.ucultcoin', to: 'uzig', pair: 'CULTCOIN/ZIG' },
   { from: 'uzig', to: 'coin.zig1fepzhtkq2r5gc4prq94yukg6vaqjvkam27gwk3.dyor', pair: 'DYOR/ZIG' },
-  { from: 'coin.zig1fepzhtkq2r5gc4prq94yukg6vaqjvkam27gwk3.dyor', to: 'uzig', pair: 'DYOR/ZIG' },
-  { from: 'uzig', to: 'coin.zig1f6dk5csplyvyqvk7uvtsf8yll82lxzmquzctw7wvwajn2a7emmeqzzgvly', pair: 'STZIG/ZIG' },
-  { from: 'coin.zig1f6dk5csplyvyqvk7uvtsf8yll82lxzmquzctw7wvwajn2a7emmeqzzgvly', to: 'uzig', pair: 'STZIG/ZIG' }
+  { from: 'uzig', to: 'coin.zig1f6dk5csplyvyqvk7uvtsf8yll82lxzmquzctw7wvwajn2a7emmeqzzgvly', pair: 'STZIG/ZIG' }
 ];
 
 const LIQUIDITY_PAIRS = [
@@ -190,7 +182,6 @@ async function getPoolInfo(contractAddress) {
   }
 }
 
-// Tambahan: Cek pool liquidity sebelum swap, auto-skip pool kosong/tipis
 async function canSwap(pairName, fromDenom, amount) {
   const pair = TOKEN_PAIRS[pairName];
   const poolInfo = await getPoolInfo(pair.contract);
@@ -200,7 +191,6 @@ async function canSwap(pairName, fromDenom, amount) {
   }
   const asset = poolInfo.assets.find(a => a.info.native_token?.denom === fromDenom);
   const poolBalance = asset ? parseFloat(asset.amount) / Math.pow(10, TOKEN_DECIMALS[fromDenom]) : 0;
-  // Swap hanya jika pool balance > 10x amount swap (bisa diubah sesuai selera)
   if (poolBalance <= 10 * amount) {
     logger.warn(`[!] Pool ${pairName} terlalu kecil (${poolBalance} ${fromDenom}), skip swap.`);
     return false;
@@ -208,7 +198,6 @@ async function canSwap(pairName, fromDenom, amount) {
   return true;
 }
 
-// Saldo langsung node (ANTI 403)
 async function getBalance(address, denom) {
   try {
     const client = await SigningCosmWasmClient.connect(RPC_URL);
@@ -257,13 +246,11 @@ async function performSwap(wallet, address, amount, pairName, swapNumber, fromDe
       logger.error(`Contract address not set for ${pairName}`);
       return null;
     }
-    // Cek balance sebelum swap
     const balance = await getBalance(address, fromDenom);
     if (balance < amount) {
       logger.warn(`[!] Skip swap ${swapNumber}: saldo ${fromDenom} (${balance}) kurang dari swap (${amount})`);
       return null;
     }
-    // Cek pool liquidity sebelum swap
     if (!(await canSwap(pairName, fromDenom, amount))) {
       logger.warn(`[!] Skip swap ${swapNumber}: pool terlalu kecil untuk swap.`);
       return null;
@@ -304,17 +291,14 @@ async function addLiquidity(wallet, address, pairName) {
       logger.error(`Contract address not set for ${pairName}`);
       return null;
     }
-    // Ambil saldo token & ZIG
     const saldoToken1 = await getBalance(address, pair.token1);
     const saldoZIG = await getBalance(address, 'uzig');
     if (saldoToken1 === 0 || saldoZIG === 0) {
       logger.warn(`Skip add liquidity ${pairName}: saldo kurang`);
       return null;
     }
-    // Ambil 50% masing-masing
     const token1Amount = saldoToken1 * 0.5;
     const zigAmount = saldoZIG * 0.5;
-    // Dapatkan info pool untuk tahu rasio ideal
     const poolInfo = await getPoolInfo(pair.contract);
     if (!poolInfo) {
       logger.warn(`Skip add liquidity ${pairName}: pool info tidak didapat`);
@@ -322,9 +306,7 @@ async function addLiquidity(wallet, address, pairName) {
     }
     const poolToken1 = parseFloat(poolInfo.assets[0].amount) / Math.pow(10, TOKEN_DECIMALS[pair.token1]);
     const poolZIG = parseFloat(poolInfo.assets[1].amount) / Math.pow(10, TOKEN_DECIMALS['uzig']);
-    // Hitung rasio pool
     const ratio = poolToken1 / poolZIG;
-    // Agar tidak kelebihan: sesuaikan amount berdasarkan rasio pool
     let adjustedToken1 = token1Amount;
     let adjustedZIG = zigAmount;
     if (token1Amount / zigAmount > ratio) {
@@ -332,7 +314,6 @@ async function addLiquidity(wallet, address, pairName) {
     } else {
       adjustedZIG = token1Amount / ratio;
     }
-    // Buat micro amount
     const microAmountToken1 = toMicroUnits(adjustedToken1, pair.token1);
     const microAmountZIG = toMicroUnits(adjustedZIG, 'uzig');
     const msg = {
@@ -359,7 +340,7 @@ async function addLiquidity(wallet, address, pairName) {
   }
 }
 
-async function withdrawLiquidity(/* wallet, address, pairName */) {
+async function withdrawLiquidity() {
   logger.warn(`No pool tokens found to withdraw for this pair`);
   return null;
 }
