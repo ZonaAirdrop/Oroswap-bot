@@ -90,6 +90,12 @@ const LIQUIDITY_PAIRS = [
   'CULTCOIN/ZIG'
 ];
 
+function getRandomMaxSpread() {
+  const min = 0.005;
+  const max = 0.02;
+  return (Math.random() * (max - min) + min).toFixed(3);
+}
+
 const rl = createInterface({
   input: process.stdin,
   output: process.stdout,
