@@ -76,14 +76,17 @@ const TOKEN_DECIMALS = {
   'coin.zig12jgpgq5ec88nwzkkjx7jyrzrljpph5pnags8sn.ucultcoin': 6,
 };
 
-// ONLY swap ke: ORO, NFA, CULTCOIN
-const SWAP_SEQUENCE = [
-  { from: 'uzig', to: 'coin.zig10rfjm85jmzfhravjwpq3hcdz8ngxg7lxd0drkr.uoro', pair: 'ORO/ZIG' },
-  { from: 'uzig', to: 'coin.zig1qaf4dvjt5f8naam2mzpmysjm5e8sp2yhrzex8d.nfa', pair: 'NFA/ZIG' },
-  { from: 'uzig', to: 'coin.zig12jgpgq5ec88nwzkkjx7jyrzrljpph5pnags8sn.ucultcoin', pair: 'CULTCOIN/ZIG' },
+// Swap directions: dua arah ZIG <-> ORO, NFA, CULTCOIN
+const SWAP_DIRECTIONS = [
+  { pair: 'ORO/ZIG', from: 'uzig', to: 'coin.zig10rfjm85jmzfhravjwpq3hcdz8ngxg7lxd0drkr.uoro' },
+  { pair: 'ORO/ZIG', from: 'coin.zig10rfjm85jmzfhravjwpq3hcdz8ngxg7lxd0drkr.uoro', to: 'uzig' },
+  { pair: 'NFA/ZIG', from: 'uzig', to: 'coin.zig1qaf4dvjt5f8naam2mzpmysjm5e8sp2yhrzex8d.nfa' },
+  { pair: 'NFA/ZIG', from: 'coin.zig1qaf4dvjt5f8naam2mzpmysjm5e8sp2yhrzex8d.nfa', to: 'uzig' },
+  { pair: 'CULTCOIN/ZIG', from: 'uzig', to: 'coin.zig12jgpgq5ec88nwzkkjx7jyrzrljpph5pnags8sn.ucultcoin' },
+  { pair: 'CULTCOIN/ZIG', from: 'coin.zig12jgpgq5ec88nwzkkjx7jyrzrljpph5pnags8sn.ucultcoin', to: 'uzig' },
 ];
 
-// ONLY liquidity ke: ORO/ZIG, NFA/ZIG, CULTCOIN/ZIG
+// Only liquidity ke: ORO/ZIG, NFA/ZIG, CULTCOIN/ZIG (random arah token1/token2)
 const LIQUIDITY_PAIRS = [
   'ORO/ZIG',
   'NFA/ZIG',
@@ -248,6 +251,10 @@ function calculateBeliefPrice(poolInfo, pairName, fromDenom) {
   }
 }
 
+function getRandomSwapDirection() {
+  return SWAP_DIRECTIONS[Math.floor(Math.random() * SWAP_DIRECTIONS.length)];
+}
+
 async function performSwap(wallet, address, amount, pairName, swapNumber, fromDenom, toDenom) {
   try {
     const pair = TOKEN_PAIRS[pairName];
@@ -268,7 +275,6 @@ async function performSwap(wallet, address, amount, pairName, swapNumber, fromDe
     const microAmount = toMicroUnits(amount, fromDenom);
     const poolInfo = await getPoolInfo(pair.contract);
     const beliefPrice = calculateBeliefPrice(poolInfo, pairName, fromDenom);
-    // max_spread dihapus (default ke 0.01 jika diperlukan)
     const maxSpread = "0.01";
     const msg = {
       swap: {
@@ -302,49 +308,37 @@ async function addLiquidity(wallet, address, pairName) {
       logger.error(`Contract address not set for ${pairName}`);
       return null;
     }
-    const saldoToken1 = await getBalance(address, pair.token1);
-    const saldoZIG = await getBalance(address, 'uzig');
-    if (saldoToken1 === 0 || saldoZIG === 0) {
+    // Random direction
+    const flip = Math.random() > 0.5;
+    const tokenA = flip ? pair.token1 : pair.token2;
+    const tokenB = flip ? pair.token2 : pair.token1;
+    const saldoA = await getBalance(address, tokenA);
+    const saldoB = await getBalance(address, tokenB);
+    if (saldoA === 0 || saldoB === 0) {
       logger.warn(`Skip add liquidity ${pairName}: saldo kurang`);
       return null;
     }
-    const token1Amount = saldoToken1 * 0.2;
-    const zigAmount = saldoZIG * 0.2;
-    const poolInfo = await getPoolInfo(pair.contract);
-    if (!poolInfo) {
-      logger.warn(`Skip add liquidity ${pairName}: pool info tidak didapat`);
-      return null;
-    }
-    const poolToken1 = parseFloat(poolInfo.assets[0].amount) / Math.pow(10, TOKEN_DECIMALS[pair.token1]);
-    const poolZIG = parseFloat(poolInfo.assets[1].amount) / Math.pow(10, TOKEN_DECIMALS['uzig']);
-    const ratio = poolToken1 / poolZIG;
-    let adjustedToken1 = token1Amount;
-    let adjustedZIG = zigAmount;
-    if (token1Amount / zigAmount > ratio) {
-      adjustedToken1 = zigAmount * ratio;
-    } else {
-      adjustedZIG = token1Amount / ratio;
-    }
-    const microAmountToken1 = toMicroUnits(adjustedToken1, pair.token1);
-    const microAmountZIG = toMicroUnits(adjustedZIG, 'uzig');
+    const amountA = saldoA * 0.2;
+    const amountB = saldoB * 0.2;
+    const microAmountA = toMicroUnits(amountA, tokenA);
+    const microAmountB = toMicroUnits(amountB, tokenB);
     const msg = {
       provide_liquidity: {
         assets: [
-          { amount: microAmountToken1.toString(), info: { native_token: { denom: pair.token1 } } },
-          { amount: microAmountZIG.toString(), info: { native_token: { denom: 'uzig' } } },
+          { amount: microAmountA.toString(), info: { native_token: { denom: tokenA } } },
+          { amount: microAmountB.toString(), info: { native_token: { denom: tokenB } } },
         ],
         slippage_tolerance: "0.5",
       },
     };
     const funds = [
-      { denom: pair.token1, amount: microAmountToken1.toString() },
-      { denom: 'uzig', amount: microAmountZIG.toString() }
+      { denom: tokenA, amount: microAmountA.toString() },
+      { denom: tokenB, amount: microAmountB.toString() }
     ];
-    logger.loading(`Adding liquidity (20%): ${adjustedToken1.toFixed(6)} ${TOKEN_SYMBOLS[pair.token1]} + ${adjustedZIG.toFixed(6)} ZIG`);
+    logger.swap(`Adding liquidity (20%): ${amountA.toFixed(6)} ${TOKEN_SYMBOLS[tokenA]} + ${amountB.toFixed(6)} ${TOKEN_SYMBOLS[tokenB]}`);
     const client = await SigningCosmWasmClient.connectWithSigner(RPC_URL, wallet, { gasPrice: GAS_PRICE });
     const result = await client.execute(address, pair.contract, msg, 'auto', `Adding ${pairName} Liquidity`, funds);
-    logger.success(`Liquidity added for ${pairName}! Tx: ${EXPLORER_URL}${result.transactionHash}`);
-    logger.success(`Add Liquidity Completed for ${pairName}`);
+    logger.swapSuccess(`Add Liquidity Completed for ${pairName}! Tx: ${EXPLORER_URL}${result.transactionHash}`);
     return result;
   } catch (error) {
     logger.error(`Add liquidity failed for ${pairName}: ${error.message}`);
@@ -373,10 +367,20 @@ async function executeTransactionCycle(
 
   let swapNo = 1;
   for (let i = 0; i < numSwaps; i++) {
-    const idx = i % SWAP_SEQUENCE.length;
-    const { from, to, pair } = SWAP_SEQUENCE[idx];
+    let swapConfig;
+    let tries = 0;
+    do {
+      swapConfig = getRandomSwapDirection();
+      const balance = await getBalance(address, swapConfig.from);
+      if (balance > 0.001) break;
+      tries++;
+    } while (tries < 10);
+    if (tries === 10) {
+      logger.warn("Tidak ada saldo cukup untuk swap.");
+      continue;
+    }
     const swapAmount = getRandomSwapAmount();
-    await performSwap(wallet, address, swapAmount, pair, swapNo++, from, to);
+    await performSwap(wallet, address, swapAmount, swapConfig.pair, swapNo++, swapConfig.from, swapConfig.to);
     const delay = getRandomDelay(swapMinDelay, swapMaxDelay);
     await new Promise(resolve => setTimeout(resolve, delay * 1000));
   }
