@@ -190,8 +190,8 @@ async function getAccountAddress(wallet) {
 }
 
 function getRandomSwapAmount() {
-  const min = 0.001;
-  const max = 0.002;
+  const min = 0.01;
+  const max = 0.02;
   return Math.random() * (max - min) + min;
 }
 
@@ -397,7 +397,7 @@ async function getPoints(address) {
 
 function displayCountdown(hours, minutes, seconds) {
   const timeStr = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-  process.stdout.write(`\r${colors.cyan}[⏰] Next execution in: ${timeStr}${colors.reset}`);
+  process.stdout.write(`\r${colors.cyan}[🧭] Next execution in: ${timeStr}${colors.reset}`);
 }
 
 async function executeTransactionCycle(
