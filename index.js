@@ -90,46 +90,19 @@ const TOKEN_DECIMALS = {
   'coin.zig1ptxpjgl3lsxrq99zl6ad2nmrx4lhnhne26m6ys.bee': 6,
   'coin.zig1rl9wxfsuj5fx0tcuvxpcyn3qrw4cc8ahy3jxgp.ufomofeast': 6,
   'coin.zig1qaf4dvjt5f8naam2mzpmysjm5e8sp2yhrzex8d.nfa': 6,
-  'coin.zig1avul6jj5lad4dqftgu8yfgkgrhy4u9lwsaj67x.test': 6,
   'coin.zig12jgpgq5ec88nwzkkjx7jyrzrljpph5pnags8sn.ucultcoin': 6,
-  'coin.zig1t2m3pjlzjejsu7l2z4zczy6t2rzt0qu4ed63um.pandaabefa': 6,
-  'coin.zig1a3ecawtdl4y72f0j3rryuw6srphuqctu22mtd8.newtoken': 6,
   'coin.zig1fepzhtkq2r5gc4prq94yukg6vaqjvkam27gwk3.dyor': 6,
-  'ibc/B6863C1B541063B17C757293EC2E45BD2984AAC8CADD5ED7EDC2DA58B99445DC': 6,
-  'coin.zig1wg4d2l295cuhq5m3m8uuwfw7qe0syskq077qkx.udyor': 6,
-  'coin.zig1v6q4m8u95hwghzskk59a79gk5zymfp263vkyec.pandabafc': 6,
-  'coin.zig10xvc3tkqrdyym6ep9lrt5005mrwvw6rml66qv7jxwnzlpqfmw7ksq7n7nm.customone': 6,
-  'coin.zig10xvc3tkqrdyym6ep9lrt5005mrwvw6rml66qv7jxwnzlpqfmw7ksq7n7nm.times': 6,
-  'coin.zig1ela5wdznypq8fhf4lnqg90z2lk7376aunptf6slegrs60vlfyusq9rz73g.hahahah': 6,
-  'coin.zig10xvc3tkqrdyym6ep9lrt5005mrwvw6rml66qv7jxwnzlpqfmw7ksq7n7nm.alphaaa': 6,
-  'coin.zig10xvc3tkqrdyym6ep9lrt5005mrwvw6rml66qv7jxwnzlpqfmw7ksq7n7nm.customtoken': 6,
-  'coin.zig10xvc3tkqrdyym6ep9lrt5005mrwvw6rml66qv7jxwnzlpqfmw7ksq7n7nm.cancel': 6,
-  'coin.zig1h48qf2nv8kw2a6uc6lm0sey7tzp5asqhf8jtd3.messi': 6,
-  'coin.zig1h48qf2nv8kw2a6uc6lm0sey7tzp5asqhf8jtd3.ronaldo': 6,
-  'coin.zig15ztppgc8859ramweldxdmcf7fa5y6kzs5lewfd.uryan': 6
-};
+  'coin.zig1f6dk5csplyvyqvk7uvtsf8yll82lxzmquzctw7wvwajn2a7emmeqzzgvly': 6,
+  };
 
 const DEFAULT_BELIEF_PRICES = {
   'ORO/ZIG': "1.982160555004955471",
-  'BEE/ZIG': "1.0",
-  'FOMOFEAST/ZIG': "1.0",
-  'NFA/ZIG': "1.0",
-  'CULTCOIN/ZIG': "1.0",
-  'PANDAABEFA/ZIG': "1.0",
-  'NT/ZIG': "1.0",
-  'DYOR/ZIG': "1.0",
-  'UNIT-ZIG/ZIG': "1.0",
-  'UDYOR/ZIG': "1.0",
-  'PANDABAFC/ZIG': "1.0",
-  'SHITTY/ZIG': "1.0",
-  'IMAGE/ZIG': "1.0",
-  'HOHOHOH/ZIG': "1.0",
-  'BASICA/ZIG': "1.0",
-  'MARKETPLACE/ZIG': "1.0",
-  'PENCIL/ZIG': "1.0",
-  'MES/ZIG': "1.0",
-  'RON/ZIG': "1.0",
-  'RYAN/ZIG': "1.0"
+  'BEE/ZIG': "714.285714285714334437",
+  'FOMOFEAST/ZIG': "1.415227851684121241",
+  'NFA/ZIG': "0.001793684008123236",
+  'CULTCOIN/ZIG': "0.000021729008731856",
+  'DYOR/ZIG': "333.333333333333314386",
+  'STZIG/ZIG': "0.771962328238381956",
 };
 
 const rl = createInterface({
@@ -307,7 +280,7 @@ async function addLiquidity(wallet, address, pairName) {
     
     // Fixed amounts: 1 token1 and 0.5 ZIG
     const token1Amount = 1;
-    const zigAmount = 0.5;
+    const zigAmount = 0.1;
     
     const microAmountToken1 = toMicroUnits(token1Amount, pair.token1);
     const microAmountZIG = toMicroUnits(zigAmount, pair.token2);
