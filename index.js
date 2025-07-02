@@ -1,8 +1,7 @@
 import dotenv from 'dotenv';
-import axios from 'axios';
 import { createInterface } from 'node:readline';
 
-import { CosmWasmClient, SigningCosmWasmClient } from '@cosmjs/cosmwasm-stargate';
+import { SigningCosmWasmClient } from '@cosmjs/cosmwasm-stargate';
 import pkg from '@cosmjs/stargate';
 const { GasPrice, coins } = pkg;
 import pkg2 from '@cosmjs/proto-signing';
@@ -22,7 +21,6 @@ const colors = {
 
 const logger = {
   info: (msg) => console.log(`${colors.green}[✓] ${msg}${colors.reset}`),
-  wallet: (msg) => console.log(`${colors.yellow}[➤] ${msg}${colors.reset}`),
   warn: (msg) => console.log(`${colors.yellow}[!] ${msg}${colors.reset}`),
   error: (msg) => console.log(`${colors.red}[✗] ${msg}${colors.reset}`),
   success: (msg) => console.log(`${colors.green}[+] ${msg}${colors.reset}`),
@@ -92,25 +90,18 @@ const TOKEN_DECIMALS = {
 };
 
 const SWAP_SEQUENCE = [
-  // ORO <-> ZIG
   { from: 'coin.zig10rfjm85jmzfhravjwpq3hcdz8ngxg7lxd0drkr.uoro', to: 'uzig', pair: 'ORO/ZIG' },
   { from: 'uzig', to: 'coin.zig10rfjm85jmzfhravjwpq3hcdz8ngxg7lxd0drkr.uoro', pair: 'ORO/ZIG' },
-  // ZIG <-> BEE
   { from: 'uzig', to: 'coin.zig1ptxpjgl3lsxrq99zl6ad2nmrx4lhnhne26m6ys.bee', pair: 'BEE/ZIG' },
   { from: 'coin.zig1ptxpjgl3lsxrq99zl6ad2nmrx4lhnhne26m6ys.bee', to: 'uzig', pair: 'BEE/ZIG' },
-  // ZIG <-> FOMOFEAST
   { from: 'uzig', to: 'coin.zig1rl9wxfsuj5fx0tcuvxpcyn3qrw4cc8ahy3jxgp.ufomofeast', pair: 'FOMOFEAST/ZIG' },
   { from: 'coin.zig1rl9wxfsuj5fx0tcuvxpcyn3qrw4cc8ahy3jxgp.ufomofeast', to: 'uzig', pair: 'FOMOFEAST/ZIG' },
-  // ZIG <-> NFA
   { from: 'uzig', to: 'coin.zig1qaf4dvjt5f8naam2mzpmysjm5e8sp2yhrzex8d.nfa', pair: 'NFA/ZIG' },
   { from: 'coin.zig1qaf4dvjt5f8naam2mzpmysjm5e8sp2yhrzex8d.nfa', to: 'uzig', pair: 'NFA/ZIG' },
-  // ZIG <-> CULTCOIN
   { from: 'uzig', to: 'coin.zig12jgpgq5ec88nwzkkjx7jyrzrljpph5pnags8sn.ucultcoin', pair: 'CULTCOIN/ZIG' },
   { from: 'coin.zig12jgpgq5ec88nwzkkjx7jyrzrljpph5pnags8sn.ucultcoin', to: 'uzig', pair: 'CULTCOIN/ZIG' },
-  // ZIG <-> DYOR
   { from: 'uzig', to: 'coin.zig1fepzhtkq2r5gc4prq94yukg6vaqjvkam27gwk3.dyor', pair: 'DYOR/ZIG' },
   { from: 'coin.zig1fepzhtkq2r5gc4prq94yukg6vaqjvkam27gwk3.dyor', to: 'uzig', pair: 'DYOR/ZIG' },
-  // ZIG <-> STZIG
   { from: 'uzig', to: 'coin.zig1f6dk5csplyvyqvk7uvtsf8yll82lxzmquzctw7wvwajn2a7emmeqzzgvly', pair: 'STZIG/ZIG' },
   { from: 'coin.zig1f6dk5csplyvyqvk7uvtsf8yll82lxzmquzctw7wvwajn2a7emmeqzzgvly', to: 'uzig', pair: 'STZIG/ZIG' }
 ];
@@ -124,6 +115,17 @@ const LIQUIDITY_PAIRS = [
   'DYOR/ZIG',
   'STZIG/ZIG'
 ];
+
+// Max spread dinamis per pair (bisa diubah sesuai kebutuhan pool!)
+const DEFAULT_MAX_SPREAD = {
+  "ORO/ZIG": "0.005",
+  "BEE/ZIG": "0.01",
+  "FOMOFEAST/ZIG": "0.01",
+  "NFA/ZIG": "0.01",
+  "CULTCOIN/ZIG": "0.01",
+  "DYOR/ZIG": "0.01",
+  "STZIG/ZIG": "0.005"
+};
 
 const rl = createInterface({
   input: process.stdin,
@@ -188,7 +190,7 @@ async function getPoolInfo(contractAddress) {
   }
 }
 
-// --- getBalance langsung ke node, ANTI 403 ---
+// Saldo langsung node (ANTI 403)
 async function getBalance(address, denom) {
   try {
     const client = await SigningCosmWasmClient.connect(RPC_URL);
@@ -247,11 +249,11 @@ async function performSwap(wallet, address, amount, pairName, swapNumber, fromDe
     const microAmount = toMicroUnits(amount, fromDenom);
     const poolInfo = await getPoolInfo(pair.contract);
     const beliefPrice = calculateBeliefPrice(poolInfo, pairName, fromDenom);
-
+    const maxSpread = DEFAULT_MAX_SPREAD[pairName] || "0.01";
     const msg = {
       swap: {
         belief_price: beliefPrice,
-        max_spread: "0.005", // DEX aslinya 0.005 = 0.5%
+        max_spread: maxSpread,
         offer_asset: {
           amount: microAmount.toString(),
           info: { native_token: { denom: fromDenom } },
@@ -313,18 +315,9 @@ async function addLiquidity(wallet, address, pairName) {
   }
 }
 
-// Pool token balance (LP token) dari node bukan API explorer, jadi skip withdrawLiquidity jika tidak yakin
-async function getPoolTokenBalance(address, pairName) {
-  return null; // Kosong, karena LP token balance dari node perlu implementasi query contract khusus
-}
-
-async function withdrawLiquidity(wallet, address, pairName) {
-  logger.warn(`No pool tokens found to withdraw for ${pairName}`);
+async function withdrawLiquidity(/* wallet, address, pairName */) {
+  logger.warn(`No pool tokens found to withdraw for this pair`);
   return null;
-}
-
-async function getPoints(address) {
-  return null; // Skipped, tidak ada cara stabil ambil points selain explorer
 }
 
 function displayCountdown(hours, minutes, seconds) {
