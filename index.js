@@ -111,12 +111,12 @@ const LIQUIDITY_PAIRS = [
 
 const DEFAULT_MAX_SPREAD = {
   "ORO/ZIG": "0.005",
-  "BEE/ZIG": "0.005",
-  "FOMOFEAST/ZIG": "0.05",
+  "BEE/ZIG": "0.04",
+  "FOMOFEAST/ZIG": "0.005",
   "NFA/ZIG": "0.005",
   "CULTCOIN/ZIG": "0.005",
-  "DYOR/ZIG": "0.005",
-  "STZIG/ZIG": "0.005"
+  "DYOR/ZIG": "0.02",
+  "STZIG/ZIG": "0.03"
 };
 
 const rl = createInterface({
