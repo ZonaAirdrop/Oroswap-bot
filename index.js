@@ -42,6 +42,18 @@ const API_URL = 'https://testnet-api.oroswap.org/api/';
 const EXPLORER_URL = 'https://zigscan.org/tx/';
 const GAS_PRICE = GasPrice.fromString('0.025uzig');
 
+// Mapping denom ke nama token
+const TOKEN_SYMBOLS = {
+  'uzig': 'ZIG',
+  'coin.zig10rfjm85jmzfhravjwpq3hcdz8ngxg7lxd0drkr.uoro': 'ORO',
+  'coin.zig1ptxpjgl3lsxrq99zl6ad2nmrx4lhnhne26m6ys.bee': 'BEE',
+  'coin.zig1rl9wxfsuj5fx0tcuvxpcyn3qrw4cc8ahy3jxgp.ufomofeast': 'FOMOFEAST',
+  'coin.zig1qaf4dvjt5f8naam2mzpmysjm5e8sp2yhrzex8d.nfa': 'NFA',
+  'coin.zig12jgpgq5ec88nwzkkjx7jyrzrljpph5pnags8sn.ucultcoin': 'CULTCOIN',
+  'coin.zig1fepzhtkq2r5gc4prq94yukg6vaqjvkam27gwk3.dyor': 'DYOR',
+  'coin.zig1f6dk5csplyvyqvk7uvtsf8yll82lxzmquzctw7wvwajn2a7emmeqzzgvly': 'STZIG'
+};
+
 const TOKEN_PAIRS = {
   'ORO/ZIG': {
     contract: 'zig15jqg0hmp9n06q0as7uk3x9xkwr9k3r7yh4ww2uc0hek8zlryrgmsamk4qg',
@@ -219,12 +231,34 @@ async function getUserInfo(walletAddress) {
 }
 
 async function getAllBalances(address) {
-  const denoms = ['uzig', ...Object.values(TOKEN_PAIRS).map(pair => pair.token1)];
+  const denoms = Object.keys(TOKEN_SYMBOLS);
   const balances = {};
   for (const denom of denoms) {
     balances[denom] = await getBalance(address, denom);
   }
   return balances;
+}
+
+// Print info wallet: points, saldo (rapih)
+async function printWalletInfo(address) {
+  const userInfo = await getUserInfo(address);
+  let points = 0;
+  if (userInfo && userInfo.data && userInfo.data.point) {
+    points = userInfo.data.point;
+  }
+  logger.info(`Wallet: ${address}`);
+  logger.info(`Points: ${points}`);
+
+  const balances = await getAllBalances(address);
+  let balanceStr = '[✓] Balance: ';
+  for (const denom of Object.keys(TOKEN_SYMBOLS)) {
+    const symbol = TOKEN_SYMBOLS[denom];
+    const val = balances[denom];
+    balanceStr += `${symbol} ${val} | `;
+  }
+  balanceStr = balanceStr.replace(/\s\|\s$/, '');
+  logger.info(balanceStr);
+  return { points, balances };
 }
 
 function calculateBeliefPrice(poolInfo, pairName, fromDenom) {
@@ -266,7 +300,7 @@ async function performSwap(wallet, address, amount, pairName, swapNumber, fromDe
     }
     const balance = await getBalance(address, fromDenom);
     if (balance < amount) {
-      logger.warn(`[!] Skip swap ${swapNumber}: saldo ${fromDenom} (${balance}) kurang dari swap (${amount})`);
+      logger.warn(`[!] Skip swap ${swapNumber}: saldo ${TOKEN_SYMBOLS[fromDenom] || fromDenom} (${balance}) kurang dari swap (${amount})`);
       return null;
     }
     if (!(await canSwap(pairName, fromDenom, amount))) {
@@ -289,8 +323,8 @@ async function performSwap(wallet, address, amount, pairName, swapNumber, fromDe
       },
     };
     const funds = coins(microAmount, fromDenom);
-    const fromSymbol = fromDenom === 'uzig' ? "ZIG" : pairName.split('/')[0];
-    const toSymbol = toDenom === 'uzig' ? "ZIG" : pairName.split('/')[0];
+    const fromSymbol = TOKEN_SYMBOLS[fromDenom] || fromDenom;
+    const toSymbol = TOKEN_SYMBOLS[toDenom] || toDenom;
 
     logger.swap(`Swap ${swapNumber}: ${amount.toFixed(5)} ${fromSymbol} -> ${toSymbol}`);
     logger.info(`Max spread swap: ${maxSpread}`);
@@ -348,7 +382,7 @@ async function addLiquidity(wallet, address, pairName) {
       { denom: pair.token1, amount: microAmountToken1.toString() },
       { denom: 'uzig', amount: microAmountZIG.toString() }
     ];
-    logger.loading(`Adding liquidity (20%): ${adjustedToken1.toFixed(6)} ${pair.token1} + ${adjustedZIG.toFixed(6)} ZIG`);
+    logger.loading(`Adding liquidity (20%): ${adjustedToken1.toFixed(6)} ${TOKEN_SYMBOLS[pair.token1]} + ${adjustedZIG.toFixed(6)} ZIG`);
     const client = await SigningCosmWasmClient.connectWithSigner(RPC_URL, wallet, { gasPrice: GAS_PRICE });
     const result = await client.execute(address, pair.contract, msg, 'auto', `Adding ${pairName} Liquidity`, funds);
     logger.success(`Liquidity added for ${pairName}! Tx: ${EXPLORER_URL}${result.transactionHash}`);
@@ -377,24 +411,7 @@ async function executeTransactionCycle(
   liquidityMaxDelay
 ) {
   logger.step(`--- Transaction For Wallet ${walletNumber} ---`);
-
-  // User info & points
-  const userInfo = await getUserInfo(address);
-  let userPoints = 0, username = "-";
-  if (userInfo && userInfo.data) {
-    username = userInfo.data.username || '-';
-    userPoints = userInfo.data.point || 0;
-    logger.info(`Wallet: ${address} | Username: ${username} | Points: ${userPoints}`);
-  } else {
-    logger.info(`Wallet: ${address}`);
-  }
-
-  // Show all balances
-  const balances = await getAllBalances(address);
-  logger.info(`Balances:`);
-  Object.entries(balances).forEach(([denom, bal]) => {
-    logger.info(`  ${denom}: ${bal}`);
-  });
+  await printWalletInfo(address);
 
   let swapNo = 1;
   for (let i = 0; i < numSwaps; i++) {
