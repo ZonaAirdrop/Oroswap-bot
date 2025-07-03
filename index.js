@@ -221,8 +221,7 @@ async function printWalletInfo(address) {
     const val = balances[denom];
     balanceStr += `${symbol} ${val} | `;
   }
-  balanceStr += `Points ${points}`; // tambahkan points di akhir balance
-  balanceStr = balanceStr.replace(/\s\|\sPoints/, ' | Points'); // agar format rapi
+  balanceStr = balanceStr.replace(/\s\|\s$/, ''); // hapus strip di akhir
   logger.info(balanceStr);
   return { points, balances };
 }
