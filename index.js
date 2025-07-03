@@ -404,14 +404,15 @@ function loadProxiesFromFile(filename = 'proxy.txt') {
   if (!fs.existsSync(filename)) {
     return [];
   }
-  return fs.readFileSync(filename, 'utf-8')
+  const lines = fs.readFileSync(filename, 'utf-8')
     .split('\n')
-    .map(line => line.trim())
-    .filter(line =>
-      line && !line.startsWith('#') &&
-      // menerima: ip:port, user:pass@ip:port, http(s)://user:pass@ip:port, http(s)://ip:port
-      /^((http(s)?:\/\/)?([^\s@]+:[^\s@]+@)?[0-9.]+:\d+)$/.test(line)
-    );
+    .map(line => line.trim());
+  console.log('DEBUG PROXY LINES:', lines); // tambah log ini
+  return lines.filter(line =>
+    line &&
+    !line.startsWith('#') &&
+    /^((http|https):\/\/)?([^\s@]+:[^\s@]+@)?[0-9a-zA-Z\-.]+:\d+$/.test(line)
+  );
 }
 
 async function executeAllWallets(
