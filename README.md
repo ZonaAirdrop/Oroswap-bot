@@ -1,6 +1,6 @@
 # Oroswap-bot
 
-**Oroswap-bot** is an automation tool written in **JavaScript (Node.js)** for performing swap and add liquidity transactions on the Zigchain network (OroSwap DEX). The bot supports multiple wallets, randomized transaction amounts and delays, and can run with or without proxies.
+**Oroswap-bot** is an automation tool written in **JavaScript (Node.js)** for performing swap and add liquidity transactions on the Zigchain network (OroSwap DEX). The bot supports multiple wallets, randomized transaction amounts and delays, and can run with or without proxies.(Coming soon waiting next update)
 
 ---
 
