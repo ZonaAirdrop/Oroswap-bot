@@ -90,12 +90,6 @@ const LIQUIDITY_PAIRS = [
   'CULTCOIN/ZIG'
 ];
 
-function getRandomMaxSpread() {
-  const min = 0.005;
-  const max = 0.02;
-  return (Math.random() * (max - min) + min).toFixed(3);
-}
-
 const rl = createInterface({
   input: process.stdin,
   output: process.stdout,
@@ -275,7 +269,12 @@ async function performSwap(wallet, address, amount, pairName, swapNumber, fromDe
     const poolInfo = await getPoolInfo(pair.contract);
     const beliefPrice = calculateBeliefPrice(poolInfo, pairName, fromDenom);
     // max_spread dihapus (default ke 0.01 jika diperlukan)
-    const maxSpread = "0.01";
+  function getRandomMaxSpread() {
+  const min = 0.005;
+  const max = 0.02;
+  return (Math.random() * (max - min) + min).toFixed(3);
+    }
+    
     const msg = {
       swap: {
         belief_price: beliefPrice,
