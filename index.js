@@ -26,6 +26,8 @@ const logger = {
   success: (msg) => console.log(`${colors.green}[+] ${msg}${colors.reset}`),
   loading: (msg) => console.log(`${colors.cyan}[⟳] ${msg}${colors.reset}`),
   step: (msg) => console.log(`${colors.white}[➤] ${msg}${colors.reset}`),
+  swap: (msg) => console.log(`${colors.cyan}[↪️] ${msg}${colors.reset}`),
+  swapSuccess: (msg) => console.log(`${colors.green}[✅] ${msg}${colors.reset}`),
   banner: () => {
     console.log(`${colors.cyan}${colors.bold}`);
     console.log('-------------------------------------------------');
@@ -40,20 +42,18 @@ const API_URL = 'https://testnet-api.oroswap.org/api/';
 const EXPLORER_URL = 'https://zigscan.org/tx/';
 const GAS_PRICE = GasPrice.fromString('0.025uzig');
 
+// Only token aktif: ZIG, ORO, NFA, CULTCOIN
+const TOKEN_SYMBOLS = {
+  'uzig': 'ZIG',
+  'coin.zig10rfjm85jmzfhravjwpq3hcdz8ngxg7lxd0drkr.uoro': 'ORO',
+  'coin.zig1qaf4dvjt5f8naam2mzpmysjm5e8sp2yhrzex8d.nfa': 'NFA',
+  'coin.zig12jgpgq5ec88nwzkkjx7jyrzrljpph5pnags8sn.ucultcoin': 'CULTCOIN',
+};
+
 const TOKEN_PAIRS = {
   'ORO/ZIG': {
     contract: 'zig15jqg0hmp9n06q0as7uk3x9xkwr9k3r7yh4ww2uc0hek8zlryrgmsamk4qg',
     token1: 'coin.zig10rfjm85jmzfhravjwpq3hcdz8ngxg7lxd0drkr.uoro',
-    token2: 'uzig'
-  },
-  'BEE/ZIG': {
-    contract: 'zig1r50m5lafnmctat4xpvwdpzqndynlxt2skhr4fhzh76u0qar2y9hqu74u5h',
-    token1: 'coin.zig1ptxpjgl3lsxrq99zl6ad2nmrx4lhnhne26m6ys.bee',
-    token2: 'uzig'
-  },
-  'FOMOFEAST/ZIG': {
-    contract: 'zig1unc0549k2f0d7mjjyfm94fuz2x53wrx3px0pr55va27grdgmspcqsp4692',
-    token1: 'coin.zig1rl9wxfsuj5fx0tcuvxpcyn3qrw4cc8ahy3jxgp.ufomofeast',
     token2: 'uzig'
   },
   'NFA/ZIG': {
@@ -65,59 +65,36 @@ const TOKEN_PAIRS = {
     contract: 'zig1j55nw46crxkm03fjdf3cqx3py5cd32jny685x9c3gftfdt2xlvjs63znce',
     token1: 'coin.zig12jgpgq5ec88nwzkkjx7jyrzrljpph5pnags8sn.ucultcoin',
     token2: 'uzig'
-  },
-  'DYOR/ZIG': {
-    contract: 'zig1us8t6pklp2v2pjqnnedg9wnp3pv50kl448csv0lsuad599ef56jsyvakl9',
-    token1: 'coin.zig1fepzhtkq2r5gc4prq94yukg6vaqjvkam27gwk3.dyor',
-    token2: 'uzig'
-  },
-  'STZIG/ZIG': {
-    contract: 'zig19zqxslng99gw98ku3dyqaqy0c809kwssw7nzhea9x40jwxjugqvs5xaghj',
-    token1: 'coin.zig1f6dk5csplyvyqvk7uvtsf8yll82lxzmquzctw7wvwajn2a7emmeqzzgvly',
-    token2: 'uzig'
   }
 };
 
+// Token decimals
 const TOKEN_DECIMALS = {
   'uzig': 6,
   'coin.zig10rfjm85jmzfhravjwpq3hcdz8ngxg7lxd0drkr.uoro': 6,
-  'coin.zig1ptxpjgl3lsxrq99zl6ad2nmrx4lhnhne26m6ys.bee': 6,
-  'coin.zig1rl9wxfsuj5fx0tcuvxpcyn3qrw4cc8ahy3jxgp.ufomofeast': 6,
   'coin.zig1qaf4dvjt5f8naam2mzpmysjm5e8sp2yhrzex8d.nfa': 6,
   'coin.zig12jgpgq5ec88nwzkkjx7jyrzrljpph5pnags8sn.ucultcoin': 6,
-  'coin.zig1fepzhtkq2r5gc4prq94yukg6vaqjvkam27gwk3.dyor': 6,
-  'coin.zig1f6dk5csplyvyqvk7uvtsf8yll82lxzmquzctw7wvwajn2a7emmeqzzgvly': 6,
 };
 
+// ONLY swap ke: ORO, NFA, CULTCOIN
 const SWAP_SEQUENCE = [
   { from: 'uzig', to: 'coin.zig10rfjm85jmzfhravjwpq3hcdz8ngxg7lxd0drkr.uoro', pair: 'ORO/ZIG' },
-  { from: 'uzig', to: 'coin.zig1ptxpjgl3lsxrq99zl6ad2nmrx4lhnhne26m6ys.bee', pair: 'BEE/ZIG' },
-  { from: 'uzig', to: 'coin.zig1rl9wxfsuj5fx0tcuvxpcyn3qrw4cc8ahy3jxgp.ufomofeast', pair: 'FOMOFEAST/ZIG' },
   { from: 'uzig', to: 'coin.zig1qaf4dvjt5f8naam2mzpmysjm5e8sp2yhrzex8d.nfa', pair: 'NFA/ZIG' },
   { from: 'uzig', to: 'coin.zig12jgpgq5ec88nwzkkjx7jyrzrljpph5pnags8sn.ucultcoin', pair: 'CULTCOIN/ZIG' },
-  { from: 'uzig', to: 'coin.zig1fepzhtkq2r5gc4prq94yukg6vaqjvkam27gwk3.dyor', pair: 'DYOR/ZIG' },
-  { from: 'uzig', to: 'coin.zig1f6dk5csplyvyqvk7uvtsf8yll82lxzmquzctw7wvwajn2a7emmeqzzgvly', pair: 'STZIG/ZIG' }
 ];
 
+// ONLY liquidity ke: ORO/ZIG, NFA/ZIG, CULTCOIN/ZIG
 const LIQUIDITY_PAIRS = [
   'ORO/ZIG',
-  'BEE/ZIG',
-  'FOMOFEAST/ZIG',
   'NFA/ZIG',
-  'CULTCOIN/ZIG',
-  'DYOR/ZIG',
-  'STZIG/ZIG'
+  'CULTCOIN/ZIG'
 ];
 
-const DEFAULT_MAX_SPREAD = {
-  "ORO/ZIG": "0.005",
-  "BEE/ZIG": "0.04",
-  "FOMOFEAST/ZIG": "0.005",
-  "NFA/ZIG": "0.005",
-  "CULTCOIN/ZIG": "0.005",
-  "DYOR/ZIG": "0.02",
-  "STZIG/ZIG": "0.03"
-};
+function getRandomMaxSpread() {
+  const min = 0.005;
+  const max = 0.02;
+  return (Math.random() * (max - min) + min).toFixed(3);
+}
 
 const rl = createInterface({
   input: process.stdin,
@@ -162,8 +139,8 @@ async function getAccountAddress(wallet) {
 }
 
 function getRandomSwapAmount() {
-  const min = 0.002;
-  const max = 0.001;
+  const min = 0.0005;
+  const max = 0.002;
   return Math.random() * (max - min) + min;
 }
 
@@ -209,6 +186,44 @@ async function getBalance(address, denom) {
   }
 }
 
+async function getUserPoints(address) {
+  try {
+    const response = await fetch(`${API_URL}user/${address}`);
+    if (!response.ok) return 0;
+    const data = await response.json();
+    if (data && typeof data.point !== 'undefined') return data.point;
+    if (data && data.data && typeof data.data.point !== 'undefined') return data.data.point;
+    return 0;
+  } catch (e) {
+    return 0;
+  }
+}
+
+async function getAllBalances(address) {
+  const denoms = Object.keys(TOKEN_SYMBOLS);
+  const balances = {};
+  for (const denom of denoms) {
+    balances[denom] = await getBalance(address, denom);
+  }
+  return balances;
+}
+
+async function printWalletInfo(address) {
+  const points = await getUserPoints(address);
+  logger.info(`Wallet: ${address}`);
+  logger.info(`Points: ${points}`);
+  const balances = await getAllBalances(address);
+  let balanceStr = '[✓] Balance: ';
+  for (const denom of Object.keys(TOKEN_SYMBOLS)) {
+    const symbol = TOKEN_SYMBOLS[denom];
+    const val = balances[denom];
+    balanceStr += `${symbol} ${val} | `;
+  }
+  balanceStr = balanceStr.replace(/\s\|\s$/, '');
+  logger.info(balanceStr);
+  return { points, balances };
+}
+
 function calculateBeliefPrice(poolInfo, pairName, fromDenom) {
   try {
     if (!poolInfo || !poolInfo.assets || poolInfo.assets.length !== 2) {
@@ -248,7 +263,7 @@ async function performSwap(wallet, address, amount, pairName, swapNumber, fromDe
     }
     const balance = await getBalance(address, fromDenom);
     if (balance < amount) {
-      logger.warn(`[!] Skip swap ${swapNumber}: saldo ${fromDenom} (${balance}) kurang dari swap (${amount})`);
+      logger.warn(`[!] Skip swap ${swapNumber}: saldo ${TOKEN_SYMBOLS[fromDenom] || fromDenom} (${balance}) kurang dari swap (${amount})`);
       return null;
     }
     if (!(await canSwap(pairName, fromDenom, amount))) {
@@ -259,7 +274,8 @@ async function performSwap(wallet, address, amount, pairName, swapNumber, fromDe
     const microAmount = toMicroUnits(amount, fromDenom);
     const poolInfo = await getPoolInfo(pair.contract);
     const beliefPrice = calculateBeliefPrice(poolInfo, pairName, fromDenom);
-    const maxSpread = DEFAULT_MAX_SPREAD[pairName] || "0.01";
+    // max_spread dihapus (default ke 0.01 jika diperlukan)
+    const maxSpread = "0.01";
     const msg = {
       swap: {
         belief_price: beliefPrice,
@@ -271,12 +287,13 @@ async function performSwap(wallet, address, amount, pairName, swapNumber, fromDe
       },
     };
     const funds = coins(microAmount, fromDenom);
-    const fromSymbol = fromDenom === 'uzig' ? "ZIG" : pairName.split('/')[0];
-    const toSymbol = toDenom === 'uzig' ? "ZIG" : pairName.split('/')[0];
+    const fromSymbol = TOKEN_SYMBOLS[fromDenom] || fromDenom;
+    const toSymbol = TOKEN_SYMBOLS[toDenom] || toDenom;
 
-    logger.loading(`Swap ${swapNumber}: ${amount.toFixed(5)} ${fromSymbol} -> ${toSymbol}`);
+    logger.swap(`Swap ${swapNumber}: ${amount.toFixed(5)} ${fromSymbol} -> ${toSymbol}`);
+    logger.info(`Max spread swap: ${maxSpread}`);
     const result = await client.execute(address, pair.contract, msg, 'auto', 'Swap', funds);
-    logger.success(`Swap ${swapNumber} completed! Tx: ${EXPLORER_URL}${result.transactionHash}`);
+    logger.swapSuccess(`Complete swap ${swapNumber}: ${fromSymbol} -> ${toSymbol} | Tx: ${EXPLORER_URL}${result.transactionHash}`);
     return result;
   } catch (error) {
     logger.error(`Swap ${swapNumber} failed: ${error.message}`);
@@ -297,8 +314,8 @@ async function addLiquidity(wallet, address, pairName) {
       logger.warn(`Skip add liquidity ${pairName}: saldo kurang`);
       return null;
     }
-    const token1Amount = saldoToken1 * 0.5;
-    const zigAmount = saldoZIG * 0.5;
+    const token1Amount = saldoToken1 * 0.2;
+    const zigAmount = saldoZIG * 0.2;
     const poolInfo = await getPoolInfo(pair.contract);
     if (!poolInfo) {
       logger.warn(`Skip add liquidity ${pairName}: pool info tidak didapat`);
@@ -329,20 +346,16 @@ async function addLiquidity(wallet, address, pairName) {
       { denom: pair.token1, amount: microAmountToken1.toString() },
       { denom: 'uzig', amount: microAmountZIG.toString() }
     ];
-    logger.loading(`Adding liquidity (20%): ${adjustedToken1.toFixed(6)} ${pair.token1} + ${adjustedZIG.toFixed(6)} ZIG`);
+    logger.loading(`Adding liquidity (20%): ${adjustedToken1.toFixed(6)} ${TOKEN_SYMBOLS[pair.token1]} + ${adjustedZIG.toFixed(6)} ZIG`);
     const client = await SigningCosmWasmClient.connectWithSigner(RPC_URL, wallet, { gasPrice: GAS_PRICE });
     const result = await client.execute(address, pair.contract, msg, 'auto', `Adding ${pairName} Liquidity`, funds);
     logger.success(`Liquidity added for ${pairName}! Tx: ${EXPLORER_URL}${result.transactionHash}`);
+    logger.success(`Add Liquidity Completed for ${pairName}`);
     return result;
   } catch (error) {
     logger.error(`Add liquidity failed for ${pairName}: ${error.message}`);
     return null;
   }
-}
-
-async function withdrawLiquidity() {
-  logger.warn(`No pool tokens found to withdraw for this pair`);
-  return null;
 }
 
 function displayCountdown(hours, minutes, seconds) {
@@ -362,6 +375,8 @@ async function executeTransactionCycle(
   liquidityMaxDelay
 ) {
   logger.step(`--- Transaction For Wallet ${walletNumber} ---`);
+  await printWalletInfo(address);
+
   let swapNo = 1;
   for (let i = 0; i < numSwaps; i++) {
     const idx = i % SWAP_SEQUENCE.length;
@@ -376,7 +391,6 @@ async function executeTransactionCycle(
     await addLiquidity(wallet, address, pairName);
     const liquidityDelay = getRandomDelay(liquidityMinDelay, liquidityMaxDelay);
     await new Promise(resolve => setTimeout(resolve, liquidityDelay * 1000));
-    await withdrawLiquidity(wallet, address, pairName);
   }
   logger.info(`Transaction cycle finished for wallet ${walletNumber}`);
   console.log();
