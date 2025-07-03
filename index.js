@@ -28,6 +28,8 @@ const logger = {
   step: (msg) => console.log(`${colors.white}[➤] ${msg}${colors.reset}`),
   swap: (msg) => console.log(`${colors.cyan}[↪️] ${msg}${colors.reset}`),
   swapSuccess: (msg) => console.log(`${colors.green}[✅] ${msg}${colors.reset}`),
+  liquidity: (msg) => console.log(`${colors.cyan}[↪️] ${msg}${colors.reset}`), // Untuk proses liquidity
+  liquiditySuccess: (msg) => console.log(`${colors.green}[✅] ${msg}${colors.reset}`), // Untuk selesai liquidity
   banner: () => {
     console.log(`${colors.cyan}${colors.bold}`);
     console.log('-------------------------------------------------');
@@ -37,10 +39,10 @@ const logger = {
   },
 };
 
-const RPC_URL = 'https://rpc.zigscan.net/';
-const API_URL = 'https://testnet-api.oroswap.org/api/';
+const RPC_URL = 'https://testnet-rpc.zigchain.com';
+const API_URL = 'https://testnet-api.zigchain.com';
 const EXPLORER_URL = 'https://zigscan.org/tx/';
-const GAS_PRICE = GasPrice.fromString('0.025uzig');
+const GAS_PRICE = GasPrice.fromString('0.026uzig');
 
 // Only token aktif: ZIG, ORO, NFA, CULTCOIN
 const TOKEN_SYMBOLS = {
@@ -219,7 +221,7 @@ async function printWalletInfo(address) {
     const val = balances[denom];
     balanceStr += `${symbol} ${val} | `;
   }
-  balanceStr = balanceStr.replace(/\s\|\s$/, '');
+  balanceStr = balanceStr.replace(/\s\|\s$/, ''); // hapus strip di akhir
   logger.info(balanceStr);
   return { points, balances };
 }
@@ -301,7 +303,7 @@ async function performSwap(wallet, address, amount, pairName, swapNumber, fromDe
   }
 }
 
-async function addLiquidity(wallet, address, pairName) {
+async function addLiquidity(wallet, address, pairName, liquidityNumber) {
   try {
     const pair = TOKEN_PAIRS[pairName];
     if (!pair.contract) {
@@ -333,6 +335,7 @@ async function addLiquidity(wallet, address, pairName) {
     }
     const microAmountToken1 = toMicroUnits(adjustedToken1, pair.token1);
     const microAmountZIG = toMicroUnits(adjustedZIG, 'uzig');
+    logger.liquidity(`Liquidity ${liquidityNumber}: Adding (20%) ${adjustedToken1.toFixed(6)} ${TOKEN_SYMBOLS[pair.token1]} + ${adjustedZIG.toFixed(6)} ZIG`);
     const msg = {
       provide_liquidity: {
         assets: [
@@ -346,11 +349,10 @@ async function addLiquidity(wallet, address, pairName) {
       { denom: pair.token1, amount: microAmountToken1.toString() },
       { denom: 'uzig', amount: microAmountZIG.toString() }
     ];
-    logger.loading(`Adding liquidity (20%): ${adjustedToken1.toFixed(6)} ${TOKEN_SYMBOLS[pair.token1]} + ${adjustedZIG.toFixed(6)} ZIG`);
     const client = await SigningCosmWasmClient.connectWithSigner(RPC_URL, wallet, { gasPrice: GAS_PRICE });
     const result = await client.execute(address, pair.contract, msg, 'auto', `Adding ${pairName} Liquidity`, funds);
     logger.success(`Liquidity added for ${pairName}! Tx: ${EXPLORER_URL}${result.transactionHash}`);
-    logger.success(`Add Liquidity Completed for ${pairName}`);
+    logger.liquiditySuccess(`Add Liquidity Completed for ${pairName}`);
     return result;
   } catch (error) {
     logger.error(`Add liquidity failed for ${pairName}: ${error.message}`);
@@ -386,9 +388,10 @@ async function executeTransactionCycle(
     const delay = getRandomDelay(swapMinDelay, swapMaxDelay);
     await new Promise(resolve => setTimeout(resolve, delay * 1000));
   }
+  let liquidityNo = 1;
   for (let i = 0; i < numAddLiquidity; i++) {
     const pairName = LIQUIDITY_PAIRS[i % LIQUIDITY_PAIRS.length];
-    await addLiquidity(wallet, address, pairName);
+    await addLiquidity(wallet, address, pairName, liquidityNo++);
     const liquidityDelay = getRandomDelay(liquidityMinDelay, liquidityMaxDelay);
     await new Promise(resolve => setTimeout(resolve, liquidityDelay * 1000));
   }
