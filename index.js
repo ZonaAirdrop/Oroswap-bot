@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import { createInterface } from 'node:readline';
+import fs from 'fs';
 
 import { SigningCosmWasmClient } from '@cosmjs/cosmwasm-stargate';
 import pkg from '@cosmjs/stargate';
@@ -399,6 +400,16 @@ async function executeTransactionCycle(
   console.log();
 }
 
+function loadProxiesFromFile(filename = 'proxy.txt') {
+  if (!fs.existsSync(filename)) {
+    return [];
+  }
+  return fs.readFileSync(filename, 'utf-8')
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line && !line.startsWith('#') && /^[^:]+:\d+$/.test(line));
+}
+
 async function executeAllWallets(
   keys,
   numSwaps,
@@ -406,10 +417,18 @@ async function executeAllWallets(
   swapMinDelay,
   swapMaxDelay,
   liquidityMinDelay,
-  liquidityMaxDelay
+  liquidityMaxDelay,
+  proxies = []
 ) {
   for (let walletIndex = 0; walletIndex < keys.length; walletIndex++) {
     const key = keys[walletIndex];
+    let proxyUsed = null;
+    if (proxies.length > 0) {
+      proxyUsed = proxies[walletIndex % proxies.length];
+      logger.info(`Wallet ke-${walletIndex + 1} akan menggunakan proxy: ${proxyUsed}`);
+    } else {
+      logger.info(`Wallet ke-${walletIndex + 1} berjalan TANPA proxy`);
+    }
     try {
       const wallet = await getWallet(key);
       const address = await getAccountAddress(wallet);
@@ -442,7 +461,8 @@ async function startDailyCountdown(
   swapMinDelay,
   swapMaxDelay,
   liquidityMinDelay,
-  liquidityMaxDelay
+  liquidityMaxDelay,
+  proxies
 ) {
   const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
   while (true) {
@@ -465,7 +485,8 @@ async function startDailyCountdown(
       swapMinDelay,
       swapMaxDelay,
       liquidityMinDelay,
-      liquidityMaxDelay
+      liquidityMaxDelay,
+      proxies
     );
   }
 }
@@ -480,6 +501,33 @@ async function main() {
     rl.close();
     return;
   }
+
+  // --- Tambah sistem proxy sebelum wallet dieksekusi ---
+  let proxyChoice;
+  let proxies = [];
+  while (true) {
+    console.log('1. Private Proxy (dari proxy.txt)');
+    console.log('2. No Proxy');
+    const input = await prompt('Choose proxy mode [1/2]: ');
+    if (['1', '2'].includes(input)) {
+      proxyChoice = parseInt(input);
+      break;
+    }
+    logger.error('Invalid input. Please enter 1 or 2.');
+  }
+  if (proxyChoice === 1) {
+    proxies = loadProxiesFromFile();
+    if (proxies.length === 0) {
+      logger.error('proxy.txt tidak ditemukan atau semua proxy tidak valid. Tambahkan proxy ke file proxy.txt dengan format ip:port!');
+      rl.close();
+      return;
+    }
+    logger.info(`Proxy aktif, total ditemukan: ${proxies.length}`);
+  } else {
+    logger.info('Mode tanpa proxy.');
+  }
+  // ----------------------------------------------------
+
   let numSwaps;
   while (true) {
     const input = await prompt('Number of swaps per wallet: ');
@@ -533,6 +581,7 @@ async function main() {
     logger.error(`Invalid input. Please enter a number greater than or equal to ${liquidityMinDelay}.`);
   }
   console.log();
+
   await executeAllWallets(
     keys,
     numSwaps,
@@ -540,7 +589,8 @@ async function main() {
     swapMinDelay,
     swapMaxDelay,
     liquidityMinDelay,
-    liquidityMaxDelay
+    liquidityMaxDelay,
+    proxies
   );
   await startDailyCountdown(
     keys,
@@ -549,7 +599,8 @@ async function main() {
     swapMinDelay,
     swapMaxDelay,
     liquidityMinDelay,
-    liquidityMaxDelay
+    liquidityMaxDelay,
+    proxies
   );
 }
 
