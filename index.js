@@ -42,7 +42,7 @@ const logger = {
 const RPC_URL = 'https://testnet-rpc.zigchain.com';
 const API_URL = 'https://testnet-api.zigchain.com';
 const EXPLORER_URL = 'https://zigscan.org/tx/';
-const GAS_PRICE = GasPrice.fromString('0.025uzig');
+const GAS_PRICE = GasPrice.fromString('0.026uzig');
 
 // Only token aktif: ZIG, ORO, NFA, CULTCOIN
 const TOKEN_SYMBOLS = {
