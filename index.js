@@ -407,11 +407,10 @@ function loadProxiesFromFile(filename = 'proxy.txt') {
   return fs.readFileSync(filename, 'utf-8')
     .split('\n')
     .map(line => line.trim())
-    .filter(
-      line =>
-        line &&
-        !line.startsWith('#') &&
-        /^(http:\/\/)?([^@:]+(:[^@]+)?@)?[0-9.]+:\d+$/.test(line)
+    .filter(line =>
+      line && !line.startsWith('#') &&
+      // menerima: ip:port, user:pass@ip:port, http(s)://user:pass@ip:port, http(s)://ip:port
+      /^((http(s)?:\/\/)?([^\s@]+:[^\s@]+@)?[0-9.]+:\d+)$/.test(line)
     );
 }
 
