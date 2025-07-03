@@ -42,12 +42,12 @@ Create a `.env` file in the project directory. Add your wallet mnemonic(s) or pr
 
 **Example with mnemonics:**
 ```
-PRIVATE_KEY_1="word1 word2 word3 ... word12"
-PRIVATE_KEY_2="word1 ... word12"
+PRIVATE_KEY_1=word1 word2 word3 ... word12"
+PRIVATE_KEY_2=word1 ... word12"
 ```
 **Example with hex private key:**
 ```
-PRIVATE_KEY_1="abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890"
+PRIVATE_KEY_1=abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890"
 ```
 You can add as many `PRIVATE_KEY_X` entries as you want.
 
