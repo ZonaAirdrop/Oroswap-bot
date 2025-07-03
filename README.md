@@ -113,4 +113,4 @@ Use at your own risk.
 
 Open-source project by [ZonaAirdrop](https://github.com/ZonaAirdrop).
 
-Telegram: [ZonaAirdrop](https://t.me/ZonaAirdrop)
+Telegram: [ZonaAirdrop](https://t.me/ZonaAirdr0p)
