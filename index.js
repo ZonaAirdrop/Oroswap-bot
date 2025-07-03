@@ -269,7 +269,6 @@ async function performSwap(wallet, address, amount, pairName, swapNumber, fromDe
     const poolInfo = await getPoolInfo(pair.contract);
     const beliefPrice = calculateBeliefPrice(poolInfo, pairName, fromDenom);
     // max_spread dihapus (default ke 0.01 jika diperlukan)
-   }
     const maxSpread = "0.01";
     const msg = {
       swap: {
