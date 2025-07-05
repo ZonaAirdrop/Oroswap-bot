@@ -335,7 +335,7 @@ async function addLiquidity(wallet, address, pairName, liquidityNumber) {
     }
     const microAmountToken1 = toMicroUnits(adjustedToken1, pair.token1);
     const microAmountZIG = toMicroUnits(adjustedZIG, 'uzig');
-    logger.liquidity(`Liquidity ${liquidityNumber}: Adding (20%) ${adjustedToken1.toFixed(6)} ${TOKEN_SYMBOLS[pair.token1]} + ${adjustedZIG.toFixed(6)} ZIG`);
+    logger.liquidity(`Liquidity ${liquidityNumber}: Adding (5%) ${adjustedToken1.toFixed(6)} ${TOKEN_SYMBOLS[pair.token1]} + ${adjustedZIG.toFixed(6)} ZIG`);
     const msg = {
       provide_liquidity: {
         assets: [
