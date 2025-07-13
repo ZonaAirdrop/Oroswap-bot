@@ -94,20 +94,12 @@ npm start
 - **Never share your `.env` file with anyone!**  
 - To add more wallets, just add more lines to `.env` (`PRIVATE_KEY_3`, etc).
 - If you encounter dependency errors, always run `npm install` first.
-- Make sure your wallet(s) have enough balance for gas and swaps.
+- Make sure your wallet(s) have enough balance for gas and swaps
 
----
+## ☕ Buy Me a Coffee
 
-## Troubleshooting
+* **EVM:** `0x1B19167193553f125338d42432f61CBEAd2d4339`
 
-- **Dependency errors**  
-  Run `npm install` to install all dependencies.
-- **Bot not running on Windows**  
-  Use an updated terminal (CMD, PowerShell, or Windows Terminal) and the latest Node.js.
-- **Token balances not updating**  
-  Ensure your wallet has sufficient tokens and gas.
-
----
 
 ## Disclaimer
 
