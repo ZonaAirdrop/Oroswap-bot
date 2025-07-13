@@ -36,7 +36,7 @@ cd Oroswap-bot
 npm install
 ```
 
-### 3.(Optional) Create `proxies.txt`:
+### 3.(Optional) Create `proxy.txt`:
 
 Each proxy must be on a new line:
 ````
