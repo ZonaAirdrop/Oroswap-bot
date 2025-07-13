@@ -36,7 +36,16 @@ cd Oroswap-bot
 npm install
 ```
 
-### 3. Create the `.env` File
+### 3.(Optional) Create `proxies.txt`:
+
+Each proxy must be on a new line:
+````
+  ip:port # Default Protcol HTTP.
+  protocol://ip:port
+  protocol://user:pass@ip:port
+````
+
+### 4. Create the `.env` File
 
 Create a `.env` file in the project directory. Add your wallet mnemonic(s) or private key(s):
 
@@ -51,7 +60,7 @@ PRIVATE_KEY_1=abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890"
 ```
 You can add as many `PRIVATE_KEY_X` entries as you want.
 
-### 4. Run the Bot
+### 5. Run the Bot
 
 ```bash
 node index.js
