@@ -63,7 +63,7 @@ You can add as many `PRIVATE_KEY_X` entries as you want.
 ### 5. Run the Bot
 
 ```bash
-node index.js
+npm start
 ```
 
 - You will be prompted for configuration such as the number of swaps and liquidity actions per wallet, and delay settings.
