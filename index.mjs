@@ -9,19 +9,129 @@ const { DirectSecp256k1HdWallet, DirectSecp256k1Wallet } = pkg_proto_signing;
 import { HttpBatchClient, Tendermint34Client } from '@cosmjs/tendermint-rpc';
 import { SocksProxyAgent } from 'socks-proxy-agent';
 
-dotenv.config();
+// Enhanced configuration
+dotenv.config({ path: '.env' });
 
-// ... (keep your existing color and logger definitions)
+// Improved logging system
+const colors = {
+  reset: '\x1b[0m',
+  red: '\x1b[31m',
+  green: '\x1b[32m',
+  yellow: '\x1b[33m',
+  blue: '\x1b[34m',
+  magenta: '\x1b[35m',
+  cyan: '\x1b[36m',
+  white: '\x1b[37m',
+  brightBlack: '\x1b[90m',
+  brightRed: '\x1b[91m',
+  brightGreen: '\x1b[92m',
+  brightYellow: '\x1b[93m',
+  brightBlue: '\x1b[94m',
+  brightMagenta: '\x1b[95m',
+  brightCyan: '\x1b[96m',
+  brightWhite: '\x1b[97m',
+  bold: '\x1b[1m',
+  underscore: '\x1b[4m'
+};
 
-// Improved RPC Configuration with fallback
+const logger = {
+  error: (msg) => console.error(`${colors.brightRed}[✗] ${msg}${colors.reset}`),
+  warn: (msg) => console.warn(`${colors.yellow}[!] ${msg}${colors.reset}`),
+  info: (msg) => console.log(`${colors.green}[✓] ${msg}${colors.reset}`),
+  success: (msg) => console.log(`${colors.brightGreen}[+] ${msg}${colors.reset}`),
+  loading: (msg) => console.log(`${colors.cyan}[⟳] ${msg}${colors.reset}`),
+  debug: (msg) => console.log(`${colors.brightBlack}[DEBUG] ${msg}${colors.reset}`),
+  swap: (msg) => console.log(`${colors.cyan}[↪️] ${msg}${colors.reset}`),
+  swapSuccess: (msg) => console.log(`${colors.green}[✅] ${msg}${colors.reset}`),
+  liquidity: (msg) => console.log(`${colors.cyan}[⇄] ${msg}${colors.reset}`),
+  liquiditySuccess: (msg) => console.log(`${colors.green}[💧] ${msg}${colors.reset}`)
+};
+
+// Network configuration
 const RPC_ENDPOINTS = [
   'https://rpc.zigscan.net/',
   'https://testnet-rpc.zigchain.com',
   'https://zig-rpc.polkachu.com'
 ];
 let currentRpcIndex = 0;
+const EXPLORER_URL = 'https://zigscan.org/tx/';
+const GAS_PRICE = GasPrice.fromString('0.026uzig');
 
-const getRpcClient = async (useProxy = false, proxy = null) => {
+// Token configuration
+const TOKEN_CONFIG = {
+  symbols: {
+    'uzig': 'ZIG',
+    'coin.zig10rfjm85jmzfhravjwpq3hcdz8ngxg7lxd0drkr.uoro': 'ORO',
+    'coin.zig1qaf4dvjt5f8naam2mzpmysjm5e8sp2yhrzex8d.nfa': 'NFA',
+    'coin.zig12jgpgq5ec88nwzkkjx7jyrzrljpph5pnags8sn.ucultcoin': 'CULTCOIN'
+  },
+  decimals: {
+    'uzig': 6,
+    'coin.zig10rfjm85jmzfhravjwpq3hcdz8ngxg7lxd0drkr.uoro': 6,
+    'coin.zig1qaf4dvjt5f8naam2mzpmysjm5e8sp2yhrzex8d.nfa': 6,
+    'coin.zig12jgpgq5ec88nwzkkjx7jyrzrljpph5pnags8sn.ucultcoin': 6
+  },
+  pairs: {
+    'ORO/ZIG': {
+      contract: 'zig15jqg0hmp9n06q0as7uk3x9xkwr9k3r7yh4ww2uc0hek8zlryrgmsamk4qg',
+      token1: 'coin.zig10rfjm85jmzfhravjwpq3hcdz8ngxg7lxd0drkr.uoro',
+      token2: 'uzig'
+    },
+    'NFA/ZIG': {
+      contract: 'zig1dye3zfsn83jmnxqdplkfmelyszhkve9ae6jfxf5mzgqnuylr0sdq8ng9tv',
+      token1: 'coin.zig1qaf4dvjt5f8naam2mzpmysjm5e8sp2yhrzex8d.nfa',
+      token2: 'uzig'
+    },
+    'CULTCOIN/ZIG': {
+      contract: 'zig1j55nw46crxkm03fjdf3cqx3py5cd32jny685x9c3gftfdt2xlvjs63znce',
+      token1: 'coin.zig12jgpgq5ec88nwzkkjx7jyrzrljpph5pnags8sn.ucultcoin',
+      token2: 'uzig'
+    }
+  },
+  swapSequence: [
+    { from: 'uzig', to: 'coin.zig10rfjm85jmzfhravjwpq3hcdz8ngxg7lxd0drkr.uoro', pair: 'ORO/ZIG' },
+    { from: 'uzig', to: 'coin.zig1qaf4dvjt5f8naam2mzpmysjm5e8sp2yhrzex8d.nfa', pair: 'NFA/ZIG' },
+    { from: 'uzig', to: 'coin.zig12jgpgq5ec88nwzkkjx7jyrzrljpph5pnags8sn.ucultcoin', pair: 'CULTCOIN/ZIG' }
+  ],
+  liquidityPairs: ['ORO/ZIG', 'NFA/ZIG', 'CULTCOIN/ZIG']
+};
+
+// Utility functions
+function clearConsole() {
+  process.stdout.write('\x1B[2J\x1B[0f');
+}
+
+function getRandomInRange(min, max, decimals = 6) {
+  return parseFloat((Math.random() * (max - min) + min).toFixed(decimals);
+}
+
+function toMicroUnits(amount, denom) {
+  const decimals = TOKEN_CONFIG.decimals[denom] || 6;
+  return Math.floor(parseFloat(amount) * Math.pow(10, decimals));
+}
+
+function fromMicroUnits(amount, denom) {
+  const decimals = TOKEN_CONFIG.decimals[denom] || 6;
+  return parseFloat(amount) / Math.pow(10, decimals);
+}
+
+// Wallet management
+async function initializeWallet(key) {
+  try {
+    if (key.split(' ').length >= 12) { // Mnemonic
+      return await DirectSecp256k1HdWallet.fromMnemonic(key, { prefix: 'zig' });
+    } else if (/^[0-9a-fA-F]{64}$/.test(key)) { // Private key
+      return await DirectSecp256k1Wallet.fromKey(Buffer.from(key, 'hex'), 'zig');
+    }
+    throw new Error('Invalid wallet key format');
+  } catch (error) {
+    logger.error(`Wallet initialization failed: ${error.message}`);
+    throw error;
+  }
+}
+
+// RPC Client management
+async function getRpcClient(useProxy = false, proxy = null) {
   try {
     const rpcUrl = RPC_ENDPOINTS[currentRpcIndex];
     
@@ -33,37 +143,19 @@ const getRpcClient = async (useProxy = false, proxy = null) => {
     }
     return await Tendermint34Client.connect(rpcUrl);
   } catch (error) {
-    logger.error(`Failed to connect to RPC ${RPC_ENDPOINTS[currentRpcIndex]}: ${error.message}`);
-    // Rotate to next RPC endpoint
+    logger.error(`RPC connection failed: ${error.message}`);
     currentRpcIndex = (currentRpcIndex + 1) % RPC_ENDPOINTS.length;
     throw error;
   }
-};
-
-// Enhanced wallet initialization with retry logic
-async function getWallet(key, retries = 3) {
-  for (let i = 0; i < retries; i++) {
-    try {
-      if (isMnemonic(key)) {
-        return await DirectSecp256k1HdWallet.fromMnemonic(key, { prefix: 'zig' });
-      } else if (/^[0-9a-fA-F]{64}$/.test(key.trim())) {
-        return await DirectSecp256k1Wallet.fromKey(Buffer.from(key.trim(), 'hex'), 'zig');
-      }
-      throw new Error('Invalid mnemonic/private key');
-    } catch (error) {
-      if (i === retries - 1) throw error;
-      await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
-    }
-  }
 }
 
-// Improved sequence management
-class SequenceManager {
+// Account management
+class AccountManager {
   constructor() {
     this.sequences = new Map();
   }
 
-  async getCurrentSequence(address, client) {
+  async getSequence(address, client) {
     if (!this.sequences.has(address)) {
       const account = await client.getAccount(address);
       this.sequences.set(address, account?.sequence || 0);
@@ -76,53 +168,53 @@ class SequenceManager {
     this.sequences.set(address, current + 1);
   }
 
-  resetSequence(address) {
-    this.sequences.delete(address);
-  }
-
   async syncSequence(address, client) {
     const account = await client.getAccount(address);
     this.sequences.set(address, account?.sequence || 0);
+    return this.sequences.get(address);
   }
 }
 
-const sequenceManager = new SequenceManager();
+const accountManager = new AccountManager();
 
-// Enhanced transaction execution with sequence management
-async function executeWithRetry(fn, wallet, address, maxRetries = 3) {
+// Transaction execution with retry logic
+async function executeTransaction(wallet, address, executeFn, maxRetries = 3) {
   let lastError;
   
-  for (let i = 0; i < maxRetries; i++) {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    let client;
     try {
-      const client = await SigningCosmWasmClient.connectWithSigner(
+      client = await SigningCosmWasmClient.connectWithSigner(
         RPC_ENDPOINTS[currentRpcIndex], 
         wallet, 
         { 
           gasPrice: GAS_PRICE,
-          sequence: await sequenceManager.getCurrentSequence(address, client)
+          sequence: await accountManager.getSequence(address, client)
         }
       );
       
-      const result = await fn(client);
-      sequenceManager.incrementSequence(address);
+      const result = await executeFn(client);
+      accountManager.incrementSequence(address);
       return result;
     } catch (error) {
       lastError = error;
       
-      if (error.message.includes('account sequence mismatch') || 
-          error.message.includes('incorrect account sequence')) {
-        logger.warn(`Sequence mismatch detected. Resyncing sequence for ${address}...`);
-        await sequenceManager.syncSequence(address, client);
-      } else if (error.message.includes('Timeout') || 
-                 error.message.includes('connection')) {
-        // Rotate RPC endpoint on connection issues
+      if (error.message.includes('account sequence mismatch')) {
+        logger.warn('Sequence mismatch detected. Resyncing...');
+        await accountManager.syncSequence(address, client);
+      } else if (error.message.includes('Timeout') || error.message.includes('connection')) {
         currentRpcIndex = (currentRpcIndex + 1) % RPC_ENDPOINTS.length;
         logger.warn(`Switched to RPC endpoint: ${RPC_ENDPOINTS[currentRpcIndex]}`);
       }
       
-      if (i < maxRetries - 1) {
-        const delay = Math.pow(2, i) * 1000; // Exponential backoff
+      if (attempt < maxRetries - 1) {
+        const delay = Math.pow(2, attempt) * 1000;
+        logger.debug(`Retrying in ${delay/1000}s... (Attempt ${attempt + 1}/${maxRetries})`);
         await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    } finally {
+      if (client) {
+        client.disconnect();
       }
     }
   }
@@ -130,76 +222,93 @@ async function executeWithRetry(fn, wallet, address, maxRetries = 3) {
   throw lastError;
 }
 
-// Improved swap function with enhanced error handling
-async function performSwap(wallet, address, amount, pairName, swapNumber, fromDenom, toDenom) {
-  return executeWithRetry(async (client) => {
-    const pair = TOKEN_PAIRS[pairName];
-    if (!pair.contract) {
-      throw new Error(`Contract address not set for ${pairName}`);
-    }
+// Swap functionality
+async function performSwap(wallet, address, amount, pairName, swapNumber) {
+  const pair = TOKEN_CONFIG.pairs[pairName];
+  if (!pair) {
+    throw new Error(`Invalid pair: ${pairName}`);
+  }
 
-    const balance = await getBalance(address, fromDenom, client);
-    if (balance < amount) {
-      throw new Error(`Insufficient balance for swap: ${balance.toFixed(6)} ${TOKEN_SYMBOLS[fromDenom]} < ${amount.toFixed(6)}`);
-    }
+  const fromSymbol = TOKEN_CONFIG.symbols[pair.token2];
+  const toSymbol = TOKEN_CONFIG.symbols[pair.token1];
 
-    const microAmount = toMicroUnits(amount, fromDenom);
-    const poolInfo = await getPoolInfo(pair.contract, client);
-    const beliefPrice = calculateBeliefPrice(poolInfo, pairName, fromDenom);
-    const maxSpread = "0.5";
-
-    const msg = {
-      swap: {
-        belief_price: beliefPrice,
-        max_spread: maxSpread,
-        offer_asset: {
-          amount: microAmount.toString(),
-          info: { native_token: { denom: fromDenom } },
-        },
-      },
-    };
-
-    const funds = coins(microAmount, fromDenom);
-    const fromSymbol = TOKEN_SYMBOLS[fromDenom];
-    const toSymbol = TOKEN_SYMBOLS[toDenom];
-
-    logger.swap(`Swap ${swapNumber}: ${amount.toFixed(5)} ${fromSymbol} -> ${toSymbol}`);
-    logger.info(`Max spread: ${maxSpread}, Belief price: ${beliefPrice}`);
-
-    const result = await client.execute(address, pair.contract, msg, 'auto', 'Swap', funds);
+  return executeTransaction(wallet, address, async (client) => {
+    // Check balances
+    const balance = await client.getBalance(address, pair.token2);
+    const balanceAmount = fromMicroUnits(balance.amount, pair.token2);
     
-    logger.swapSuccess(`Swap ${swapNumber} successful: ${EXPLORER_URL}${result.transactionHash}`);
-    return result;
-  }, wallet, address);
-}
-
-// Improved liquidity addition function
-async function addLiquidity(wallet, address, pairName, liquidityNumber) {
-  return executeWithRetry(async (client) => {
-    const pair = TOKEN_PAIRS[pairName];
-    if (!pair.contract) {
-      throw new Error(`Contract address not set for ${pairName}`);
+    if (balanceAmount < amount) {
+      throw new Error(`Insufficient ${fromSymbol} balance: ${balanceAmount.toFixed(6)} < ${amount}`);
     }
 
-    const [saldoToken1, saldoZIG] = await Promise.all([
-      getBalance(address, pair.token1, client),
-      getBalance(address, 'uzig', client)
-    ]);
-
-    if (saldoToken1 === 0 || saldoZIG === 0) {
-      throw new Error(`Insufficient balance for liquidity: ${saldoToken1} ${TOKEN_SYMBOLS[pair.token1]} / ${saldoZIG} ZIG`);
-    }
-
-    // Calculate amounts with better precision
-    const token1Amount = saldoToken1 * 0.005; // Reduced from 5% to 0.5% to avoid large liquidity additions
-    const zigAmount = saldoZIG * 0.005;
-
-    const poolInfo = await getPoolInfo(pair.contract, client);
-    if (!poolInfo) {
+    // Get pool info
+    const poolInfo = await client.queryContractSmart(pair.contract, { pool: {} });
+    if (!poolInfo?.assets) {
       throw new Error('Failed to get pool info');
     }
 
-    // Improved ratio calculation
+    // Calculate belief price
+    const asset1 = poolInfo.assets.find(a => a.info.native_token?.denom === pair.token1);
+    const asset2 = poolInfo.assets.find(a => a.info.native_token?.denom === pair.token2);
+    
+    if (!asset1 || !asset2) {
+      throw new Error('Pool assets not found');
+    }
+
+    const price = parseFloat(asset2.amount) / parseFloat(asset1.amount);
+    const beliefPrice = price.toFixed(18);
+
+    // Prepare swap message
+    const msg = {
+      swap: {
+        belief_price: beliefPrice,
+        max_spread: "0.005", // 0.5%
+        offer_asset: {
+          amount: toMicroUnits(amount, pair.token2).toString(),
+          info: { native_token: { denom: pair.token2 } }
+        }
+      }
+    };
+
+    const funds = coins(toMicroUnits(amount, pair.token2), pair.token2);
+
+    logger.swap(`Swap ${swapNumber}: ${amount} ${fromSymbol} → ${toSymbol}`);
+    logger.debug(`Belief price: 1 ${toSymbol} = ${beliefPrice} ${fromSymbol}`);
+
+    const result = await client.execute(address, pair.contract, msg, 'auto', 'Swap', funds);
+    
+    logger.swapSuccess(`Swap ${swapNumber} successful! Tx: ${EXPLORER_URL}${result.transactionHash}`);
+    return result;
+  });
+}
+
+// Liquidity functionality
+async function addLiquidity(wallet, address, pairName, liquidityNumber) {
+  const pair = TOKEN_CONFIG.pairs[pairName];
+  if (!pair) {
+    throw new Error(`Invalid pair: ${pairName}`);
+  }
+
+  return executeTransaction(wallet, address, async (client) => {
+    // Get balances
+    const [token1Balance, token2Balance] = await Promise.all([
+      client.getBalance(address, pair.token1),
+      client.getBalance(address, pair.token2)
+    ]);
+
+    const token1Amount = fromMicroUnits(token1Balance.amount, pair.token1);
+    const token2Amount = fromMicroUnits(token2Balance.amount, pair.token2);
+
+    if (token1Amount <= 0 || token2Amount <= 0) {
+      throw new Error(`Insufficient balances: ${TOKEN_CONFIG.symbols[pair.token1]} ${token1Amount}, ${TOKEN_CONFIG.symbols[pair.token2]} ${token2Amount}`);
+    }
+
+    // Get pool ratio
+    const poolInfo = await client.queryContractSmart(pair.contract, { pool: {} });
+    if (!poolInfo?.assets) {
+      throw new Error('Failed to get pool info');
+    }
+
     const poolAsset1 = poolInfo.assets.find(a => a.info.native_token?.denom === pair.token1);
     const poolAsset2 = poolInfo.assets.find(a => a.info.native_token?.denom === pair.token2);
     
@@ -208,178 +317,212 @@ async function addLiquidity(wallet, address, pairName, liquidityNumber) {
     }
 
     const ratio = parseFloat(poolAsset1.amount) / parseFloat(poolAsset2.amount);
-    const adjustedToken1 = Math.min(token1Amount, zigAmount * ratio);
-    const adjustedZIG = adjustedToken1 / ratio;
-
-    const microAmountToken1 = toMicroUnits(adjustedToken1, pair.token1);
-    const microAmountZIG = toMicroUnits(adjustedZIG, 'uzig');
-
-    if (microAmountToken1 <= 0 || microAmountZIG <= 0) {
-      throw new Error('Calculated liquidity amounts too small');
+    
+    // Calculate amounts (0.5% of current balance, adjusted to pool ratio)
+    const targetToken1 = token1Amount * 0.005;
+    const targetToken2 = token2Amount * 0.005;
+    
+    let adjustedToken1, adjustedToken2;
+    if (targetToken1 / targetToken2 > ratio) {
+      adjustedToken1 = targetToken2 * ratio;
+      adjustedToken2 = targetToken2;
+    } else {
+      adjustedToken1 = targetToken1;
+      adjustedToken2 = targetToken1 / ratio;
     }
 
-    logger.liquidity(`Adding liquidity: ${adjustedToken1.toFixed(6)} ${TOKEN_SYMBOLS[pair.token1]} + ${adjustedZIG.toFixed(6)} ZIG`);
-
+    // Prepare liquidity message
     const msg = {
       provide_liquidity: {
         assets: [
-          { amount: microAmountToken1.toString(), info: { native_token: { denom: pair.token1 } } },
-          { amount: microAmountZIG.toString(), info: { native_token: { denom: 'uzig' } } },
+          {
+            amount: toMicroUnits(adjustedToken1, pair.token1).toString(),
+            info: { native_token: { denom: pair.token1 } }
+          },
+          {
+            amount: toMicroUnits(adjustedToken2, pair.token2).toString(),
+            info: { native_token: { denom: pair.token2 } }
+          }
         ],
-        slippage_tolerance: "0.5",
-      },
+        slippage_tolerance: "0.005" // 0.5%
+      }
     };
 
     const funds = [
-      { denom: pair.token1, amount: microAmountToken1.toString() },
-      { denom: 'uzig', amount: microAmountZIG.toString() }
+      { denom: pair.token1, amount: toMicroUnits(adjustedToken1, pair.token1).toString() },
+      { denom: pair.token2, amount: toMicroUnits(adjustedToken2, pair.token2).toString() }
     ];
 
-    const result = await client.execute(address, pair.contract, msg, 'auto', `Add ${pairName} Liquidity`, funds);
-    logger.liquiditySuccess(`Liquidity added: ${EXPLORER_URL}${result.transactionHash}`);
+    logger.liquidity(`Adding liquidity to ${pairName}: ${adjustedToken1.toFixed(6)} ${TOKEN_CONFIG.symbols[pair.token1]} + ${adjustedToken2.toFixed(6)} ${TOKEN_CONFIG.symbols[pair.token2]}`);
+    
+    const result = await client.execute(address, pair.contract, msg, 'auto', `Add ${pairName} liquidity`, funds);
+    
+    logger.liquiditySuccess(`Liquidity added to ${pairName}! Tx: ${EXPLORER_URL}${result.transactionHash}`);
     return result;
-  }, wallet, address);
+  });
 }
 
-// Enhanced transaction cycle with better error handling
-async function executeTransactionCycle(
+// Wallet operations
+async function getWalletBalances(address, client) {
+  const balances = {};
+  for (const denom of Object.keys(TOKEN_CONFIG.symbols)) {
+    const balance = await client.getBalance(address, denom);
+    balances[denom] = fromMicroUnits(balance.amount, denom);
+  }
+  return balances;
+}
+
+async function printWalletStatus(address, client) {
+  try {
+    const balances = await getWalletBalances(address, client);
+    
+    let balanceStr = `${colors.bold}Wallet Balances:${colors.reset}\n`;
+    for (const [denom, amount] of Object.entries(balances)) {
+      balanceStr += `  ${TOKEN_CONFIG.symbols[denom]}: ${amount.toFixed(6)}\n`;
+    }
+    
+    logger.info(balanceStr);
+    return balances;
+  } catch (error) {
+    logger.error(`Failed to get wallet status: ${error.message}`);
+    throw error;
+  }
+}
+
+// Transaction cycle
+async function executeWalletCycle(
   wallet,
   address,
   walletNumber,
   numSwaps,
-  numAddLiquidity,
-  swapMinDelay,
-  swapMaxDelay,
-  liquidityMinDelay,
-  liquidityMaxDelay
+  numLiquidity,
+  swapMinDelay = 5,
+  swapMaxDelay = 15,
+  liquidityMinDelay = 10,
+  liquidityMaxDelay = 30
 ) {
   try {
-    logger.step(`Starting transactions for wallet ${walletNumber} (${address})`);
-    await printWalletInfo(address);
+    logger.info(`\n${colors.bold}=== Wallet ${walletNumber} (${address}) ===${colors.reset}`);
+    
+    // Initialize client for status check
+    const client = await getRpcClient();
+    await printWalletStatus(address, client);
+    client.disconnect();
 
-    // Reset sequence at start of each cycle
-    sequenceManager.resetSequence(address);
+    // Reset sequence at start of cycle
+    accountManager.sequences.delete(address);
 
     // Execute swaps
     for (let i = 0; i < numSwaps; i++) {
-      const idx = i % SWAP_SEQUENCE.length;
-      const { from, to, pair } = SWAP_SEQUENCE[idx];
-      const swapAmount = getRandomSwapAmount();
+      const swapConfig = TOKEN_CONFIG.swapSequence[i % TOKEN_CONFIG.swapSequence.length];
+      const swapAmount = getRandomInRange(0.005, 0.007);
       
       try {
-        await performSwap(wallet, address, swapAmount, pair, i+1, from, to);
+        await performSwap(wallet, address, swapAmount, swapConfig.pair, i + 1);
       } catch (error) {
-        logger.error(`Swap ${i+1} failed: ${error.message}`);
+        logger.error(`Swap ${i + 1} failed: ${error.message}`);
       }
       
-      const delay = getRandomDelay(swapMinDelay, swapMaxDelay);
+      const delay = getRandomInRange(swapMinDelay, swapMaxDelay);
+      logger.debug(`Waiting ${delay}s before next swap...`);
       await new Promise(resolve => setTimeout(resolve, delay * 1000));
     }
 
     // Execute liquidity additions
-    for (let i = 0; i < numAddLiquidity; i++) {
-      const pairName = LIQUIDITY_PAIRS[i % LIQUIDITY_PAIRS.length];
+    for (let i = 0; i < numLiquidity; i++) {
+      const pairName = TOKEN_CONFIG.liquidityPairs[i % TOKEN_CONFIG.liquidityPairs.length];
       
       try {
-        await addLiquidity(wallet, address, pairName, i+1);
+        await addLiquidity(wallet, address, pairName, i + 1);
       } catch (error) {
-        logger.error(`Liquidity addition ${i+1} failed: ${error.message}`);
+        logger.error(`Liquidity addition ${i + 1} failed: ${error.message}`);
       }
       
-      const delay = getRandomDelay(liquidityMinDelay, liquidityMaxDelay);
+      const delay = getRandomInRange(liquidityMinDelay, liquidityMaxDelay);
+      logger.debug(`Waiting ${delay}s before next liquidity addition...`);
       await new Promise(resolve => setTimeout(resolve, delay * 1000));
     }
 
-    logger.success(`Completed transaction cycle for wallet ${walletNumber}`);
+    logger.success(`Completed transaction cycle for wallet ${walletNumber}\n`);
   } catch (error) {
-    logger.error(`Transaction cycle failed for wallet ${walletNumber}: ${error.message}`);
+    logger.error(`Wallet cycle failed: ${error.message}`);
+    throw error;
   }
 }
 
-// ... (rest of your existing functions like main(), display_welcome_screen(), etc.)
-
-// Modified main function to use the improved components
+// Main execution flow
 async function main() {
-  await display_welcome_screen();
-  
-  // Load configuration
-  const keys = Object.keys(process.env)
-    .filter(key => key.startsWith('PRIVATE_KEY_'))
-    .map(key => process.env[key]);
+  try {
+    clearConsole();
+    logger.info(`${colors.bold}🚀 ORO Swap Bot - Initializing...${colors.reset}`);
+
+    // Load environment variables
+    const keys = Object.keys(process.env)
+      .filter(key => key.startsWith('PRIVATE_KEY_'))
+      .map(key => process.env[key]);
     
-  if (keys.length === 0) {
-    logger.error('No private keys found in .env');
+    if (keys.length === 0) {
+      throw new Error('No private keys found in .env file');
+    }
+
+    // Load proxies if available
+    let proxies = [];
+    try {
+      const proxyData = await readFile('proxy.txt', 'utf8');
+      proxies = proxyData.split('\n').filter(line => line.trim().length > 0);
+      logger.info(`Loaded ${proxies.length} proxies`);
+    } catch {
+      logger.warn('No proxy.txt file found or error reading proxies');
+    }
+
+    // Configuration
+    const config = {
+      numSwaps: 3,
+      numLiquidity: 2,
+      swapMinDelay: 5,
+      swapMaxDelay: 15,
+      liquidityMinDelay: 10,
+      liquidityMaxDelay: 30,
+      useProxies: proxies.length > 0
+    };
+
+    logger.info(`${colors.bold}⚙️ Configuration:${colors.reset}
+  Wallets: ${keys.length}
+  Swaps per wallet: ${config.numSwaps}
+  Liquidity additions per wallet: ${config.numLiquidity}
+  Using proxies: ${config.useProxies ? 'Yes' : 'No'}`);
+
+    // Process each wallet
+    for (let i = 0; i < keys.length; i++) {
+      const wallet = await initializeWallet(keys[i]);
+      const address = (await wallet.getAccounts())[0].address;
+      
+      const proxy = config.useProxies ? proxies[i % proxies.length] : null;
+      const rpcClient = await getRpcClient(config.useProxies, proxy);
+      
+      try {
+        await executeWalletCycle(
+          wallet,
+          address,
+          i + 1,
+          config.numSwaps,
+          config.numLiquidity,
+          config.swapMinDelay,
+          config.swapMaxDelay,
+          config.liquidityMinDelay,
+          config.liquidityMaxDelay
+        );
+      } finally {
+        rpcClient.disconnect();
+      }
+    }
+
+    logger.success(`${colors.bold}✨ All wallets processed successfully!${colors.reset}`);
+  } catch (error) {
+    logger.error(`${colors.brightRed}💥 Fatal error: ${error.message}${colors.reset}`);
     process.exit(1);
   }
-
-  // Get user input for parameters
-  const numSwaps = await getNumberInput('Number of swaps per wallet: ');
-  const numAddLiquidity = await getNumberInput('Number of liquidity additions per wallet: ');
-  const swapMinDelay = await getNumberInput('Min delay between swaps (seconds): ');
-  const swapMaxDelay = await getNumberInput('Max delay between swaps (seconds): ', swapMinDelay);
-  const liquidityMinDelay = await getNumberInput('Min delay between liquidity additions (seconds): ');
-  const liquidityMaxDelay = await getNumberInput('Max delay between liquidity additions (seconds): ', liquidityMinDelay);
-
-  // Proxy configuration
-  const { useProxy, proxies } = await configureProxy();
-
-  // Execute initial cycle
-  await executeAllWallets(
-    keys,
-    numSwaps,
-    numAddLiquidity,
-    swapMinDelay,
-    swapMaxDelay,
-    liquidityMinDelay,
-    liquidityMaxDelay,
-    proxies,
-    useProxy
-  );
-
-  // Start daily cycle
-  await startDailyCountdown(
-    keys,
-    numSwaps,
-    numAddLiquidity,
-    swapMinDelay,
-    swapMaxDelay,
-    liquidityMinDelay,
-    liquidityMaxDelay,
-    proxies,
-    useProxy
-  );
 }
 
-// Helper function for number input
-async function getNumberInput(promptText, minValue = 0) {
-  while (true) {
-    const input = await prompt(promptText);
-    const num = parseInt(input);
-    if (!isNaN(num) && num >= minValue) return num;
-    logger.error(`Invalid input. Please enter a number ${minValue > 0 ? `>= ${minValue}` : '> 0'}.`);
-  }
-}
-
-// Helper function for proxy configuration
-async function configureProxy() {
-  while (true) {
-    console.log(`${colors.blue}Proxy configuration:`);
-    console.log('1. Use proxies from proxy.txt');
-    console.log('2. No proxies');
-    const choice = await prompt('Select option (1-2): ');
-    
-    if (choice === '1') {
-      const proxies = await loadProxies();
-      if (proxies.length > 0) return { useProxy: true, proxies };
-      logger.warn('No proxies found in proxy.txt');
-    } else if (choice === '2') {
-      return { useProxy: false, proxies: [] };
-    }
-    logger.error('Invalid choice');
-  }
-}
-
-main().catch(error => {
-  logger.error(`Fatal error: ${error.message}`);
-  process.exit(1);
-});
+// Start the bot
+main();
