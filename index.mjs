@@ -118,16 +118,16 @@ const LIQUIDITY_PAIRS = [
 ];
 
 function getRandomMaxSpread() {
-  // Mengembalikan nilai max_spread antara 2% (0.02) dan 5% (0.05)
-  const min = 0.02; // Ditingkatkan ke 2%
-  const max = 0.05; // Ditingkatkan ke 5%
+  // Mengembalikan nilai max_spread antara 2% (0.02) dan 8% (0.08)
+  const min = 0.02; 
+  const max = 0.08; // Ditingkatkan untuk mengakomodasi volatilitas testnet
   return (Math.random() * (max - min) + min).toFixed(3);
 }
 
 function getRandomLiquiditySlippage() {
-    // Mengembalikan nilai slippage tolerance antara 1% (0.01) dan 5% (0.05)
-    const min = 0.01; // Ditingkatkan ke 1%
-    const max = 0.05; // Ditingkatkan ke 5%
+    // Mengembalikan nilai slippage tolerance antara 1% (0.01) dan 10% (0.10)
+    const min = 0.01;
+    const max = 0.10; // Ditingkatkan untuk mengakomodasi volatilitas testnet
     return (Math.random() * (max - min) + min).toFixed(3);
 }
 
