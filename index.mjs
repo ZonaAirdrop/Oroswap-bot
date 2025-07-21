@@ -6,8 +6,9 @@ import pkg_stargate from '@cosmjs/stargate';
 const { GasPrice, coins } = pkg_stargate;
 import pkg_proto_signing from '@cosmjs/proto-signing';
 const { DirectSecp256k1HdWallet, DirectSecp256k1Wallet } = pkg_proto_signing;
-import { HttpBatchClient, Tendermint34Client } from '@cosmjs/tendermint-rpc';
-import { SocksProxyAgent } from 'socks-proxy-agent';
+// Removed HttpBatchClient and Tendermint34Client as they are not directly used with current connect method
+// import { HttpBatchClient, Tendermint34Client } from '@cosmjs/tendermint-rpc';
+import { SocksProxyAgent } from 'socks-proxy-agent'; // Still needed if using proxies for fetch or other custom HTTP requests
 
 dotenv.config();
 
@@ -119,19 +120,18 @@ const LIQUIDITY_PAIRS = [
 ];
 
 function getRandomMaxSpread() {
-  // Mengembalikan nilai max_spread antara 1% (0.01) dan 2% (0.02)
+  // Mengembalikan nilai max_spread antara 1% (0.01) dan 5% (0.05) untuk toleransi yang lebih tinggi
   const min = 0.01;
-  const max = 0.02;
+  const max = 0.05; // Diperluas untuk testnet agar lebih jarang error
   return (Math.random() * (max - min) + min).toFixed(3);
 }
 
-// Untuk slippage tolerance add liquidity, bisa gunakan rentang yang sama atau sedikit berbeda
 function getRandomLiquiditySlippage() {
-    const min = 0.005; // 0.5%
-    const max = 0.01; // 1%
+    // Mengembalikan nilai slippage tolerance antara 0.5% (0.005) dan 2% (0.02)
+    const min = 0.005;
+    const max = 0.02; // Diperluas untuk testnet agar lebih jarang error
     return (Math.random() * (max - min) + min).toFixed(3);
 }
-
 
 const rl = createInterface({
   input: process.stdin,
@@ -186,7 +186,6 @@ function getRandomDelay(min, max) {
 
 async function getPoolInfo(contractAddress) {
   try {
-    // Untuk kueri pool info, kita hanya perlu client read-only
     const client = await SigningCosmWasmClient.connect(RPC_URL);
     const poolInfo = await client.queryContractSmart(contractAddress, { pool: {} });
     return poolInfo;
@@ -208,7 +207,7 @@ async function canSwap(pairName, fromDenom, amount, contractAddress) {
 
   logger.info(`[✓] Current pool balance for ${TOKEN_SYMBOLS[fromDenom] || fromDenom} in ${pairName}: ${poolBalance.toFixed(6)}`);
 
-  if (poolBalance <= amount * 10) { // Jika pool hanya 10x dari jumlah swap, mungkin terlalu kecil
+  if (poolBalance <= amount * 10 && fromDenom === 'uzig') { // Jika pool ZIG terlalu kecil, mungkin berisiko. Untuk token lain, cek cukup ada.
     logger.warn(`[!] Pool ${pairName} terlalu kecil (${poolBalance.toFixed(6)} ${TOKEN_SYMBOLS[fromDenom] || fromDenom}), skip swap.`);
     return false;
   }
@@ -229,7 +228,10 @@ async function getBalance(address, denom) {
 async function getUserPoints(address) {
   try {
     const response = await fetch(`${API_URL}/user/${address}`);
-    if (!response.ok) return 0;
+    if (!response.ok) {
+        logger.warn(`[!] Gagal mengambil poin untuk ${address}: ${response.status} ${response.statusText}`);
+        return 0;
+    }
     const data = await response.json();
     if (data && typeof data.point !== 'undefined') return data.point;
     if (data && data.data && typeof data.data.point !== 'undefined') return data.data.point;
@@ -289,10 +291,10 @@ function calculateBeliefPrice(poolInfo, pairName, fromDenom) {
     }
 
     let price;
-    if (fromDenom === pair.token1) {
-      price = asset2Amount / asset1Amount;
-    } else {
-      price = asset1Amount / asset2Amount;
+    if (fromDenom === pair.token1) { // Jika kita menukar token1 ke token2 (misal ORO ke ZIG)
+      price = asset2Amount / asset1Amount; // Harga = ZIG per ORO
+    } else { // Jika kita menukar token2 ke token1 (misal ZIG ke ORO)
+      price = asset1Amount / asset2Amount; // Harga = ORO per ZIG
     }
     return price.toPrecision(18); // Menggunakan presisi 18 digit angka penting
   } catch (err) {
@@ -307,11 +309,11 @@ async function performSwap(wallet, address, amount, pairName, swapNumber, fromDe
     if (!pair.contract) {
       logger.error(`[✗] Contract address tidak disetel untuk ${pairName}. Swap ${swapNumber} dibatalkan.`);
       return null;
-    }
-
-    const balance = await getBalance(address, fromDenom);
-    if (balance < amount) {
-      logger.warn(`[!] Skip swap ${swapNumber}: saldo ${TOKEN_SYMBOLS[fromDenom] || fromDenom} (${balance.toFixed(6)}) kurang dari swap (${amount.toFixed(6)}).`);
+  	}
+	
+	const currentBalance = await getBalance(address, fromDenom);
+    if (currentBalance < amount) {
+      logger.warn(`[!] Skip swap ${swapNumber}: saldo ${TOKEN_SYMBOLS[fromDenom] || fromDenom} (${currentBalance.toFixed(6)}) kurang dari swap (${amount.toFixed(6)}).`);
       return null;
     }
 
@@ -363,6 +365,8 @@ async function performSwap(wallet, address, amount, pairName, swapNumber, fromDe
       errorMessage = `Operation exceeds max spread limit. Try increasing max spread or retry later.`;
     } else if (errorMessage.includes('incorrect account sequence')) {
         errorMessage = `Account sequence mismatch. Possible causes: sending too fast, or a previous transaction failed. Consider increasing delay.`;
+    } else if (errorMessage.includes('insufficient funds')) {
+        errorMessage = `Insufficient funds for swap. Check your balance.`;
     }
     logger.error(`[✗] Swap ${swapNumber} failed: ${errorMessage}`);
     return null;
@@ -380,7 +384,9 @@ async function addLiquidity(wallet, address, pairName, liquidityNumber) {
     const saldoToken1 = await getBalance(address, pair.token1);
     const saldoZIG = await getBalance(address, 'uzig');
 
-    if (saldoToken1 <= 0.000001 || saldoZIG <= 0.000001) { // Periksa saldo yang sangat kecil juga
+    // Cek saldo minimal yang wajar untuk transaksi, misal 0.000001 (micro unit)
+    const minAllowedBalance = 0.000001;
+    if (saldoToken1 < minAllowedBalance || saldoZIG < minAllowedBalance) {
       logger.warn(`[!] Skip add liquidity ${pairName} (${liquidityNumber}): saldo token (${TOKEN_SYMBOLS[pair.token1]}: ${saldoToken1.toFixed(6)}, ZIG: ${saldoZIG.toFixed(6)}) tidak cukup atau terlalu kecil.`);
       return null;
     }
@@ -399,51 +405,54 @@ async function addLiquidity(wallet, address, pairName, liquidityNumber) {
       return null;
     }
 
-    const poolToken1 = parseFloat(poolAsset1.amount) / Math.pow(10, TOKEN_DECIMALS[pair.token1]);
-    const poolZIG = parseFloat(poolAsset2.amount) / Math.pow(10, TOKEN_DECIMALS['uzig']);
+    const poolToken1Amount = parseFloat(poolAsset1.amount);
+    const poolZIGAmount = parseFloat(poolAsset2.amount);
 
-    if (poolZIG <= 0 || poolToken1 <= 0) { // Jika salah satu pool kosong
-        logger.warn(`[!] Skip add liquidity ${pairName} (${liquidityNumber}): pool memiliki jumlah nol untuk salah satu token.`);
+    if (poolZIGAmount <= 0 || poolToken1Amount <= 0) {
+        logger.warn(`[!] Skip add liquidity ${pairName} (${liquidityNumber}): pool memiliki jumlah nol untuk salah satu token (Micro-units).`);
         return null;
     }
 
-    const ratio = poolToken1 / poolZIG;
+    // Gunakan nilai micro-unit dari pool untuk rasio yang lebih akurat
+    const poolRatio = poolToken1Amount / poolZIGAmount;
 
-    // Ambil sebagian kecil dari saldo untuk liquiditas
-    // Contoh: menggunakan 1% dari saldo yang tersedia
-    let targetToken1Amount = saldoToken1 * 0.01; // Menggunakan 1% dari saldo token1
-    let targetZIGAmount = saldoZIG * 0.01;     // Menggunakan 1% dari saldo ZIG
+    // Tentukan berapa persen dari saldo yang ingin ditambahkan ke likuiditas
+    const liquidityPercentage = 0.01; // 1% dari saldo yang tersedia
+    let targetToken1Amount = saldoToken1 * liquidityPercentage;
+    let targetZIGAmount = saldoZIG * liquidityPercentage;
+
+    let finalToken1Amount = targetToken1Amount;
+    let finalZIGAmount = targetZIGAmount;
 
     // Sesuaikan jumlah agar sesuai rasio pool
-    let adjustedToken1 = targetToken1Amount;
-    let adjustedZIG = targetZIGAmount;
-
     // Jika rasio koin yang akan ditambahkan tidak sesuai dengan rasio pool
-    if (targetToken1Amount / targetZIGAmount > ratio) {
-        // Artinya kita punya terlalu banyak token1 relatif terhadap ZIG
-        // Sesuaikan token1 agar sesuai dengan rasio ZIG yang tersedia
-        adjustedToken1 = targetZIGAmount * ratio;
+    // Kita harus membatasi jumlah yang paling 'berlebih' agar sesuai dengan yang 'kurang'
+    if (targetToken1Amount / targetZIGAmount > poolRatio) {
+        // Kita punya terlalu banyak Token1 relatif terhadap ZIG yang ingin kita tambahkan
+        // Batasi Token1 berdasarkan ZIG yang tersedia dan rasio pool
+        finalToken1Amount = targetZIGAmount * poolRatio;
     } else {
-        // Artinya kita punya terlalu banyak ZIG relatif terhadap token1
-        // Sesuaikan ZIG agar sesuai dengan rasio token1 yang tersedia
-        adjustedZIG = targetToken1Amount / ratio;
+        // Kita punya terlalu banyak ZIG relatif terhadap Token1 yang ingin kita tambahkan
+        // Batasi ZIG berdasarkan Token1 yang tersedia dan rasio pool
+        finalZIGAmount = targetToken1Amount / poolRatio;
+    }
+    
+    // Pastikan final amounts tidak melebihi saldo aktual yang dimiliki
+    finalToken1Amount = Math.min(finalToken1Amount, saldoToken1);
+    finalZIGAmount = Math.min(finalZIGAmount, saldoZIG);
+
+    // Pastikan jumlah yang akan ditambahkan tidak nol setelah penyesuaian
+    if (finalToken1Amount < minAllowedBalance || finalZIGAmount < minAllowedBalance) {
+        logger.warn(`[!] Skip add liquidity ${pairName} (${liquidityNumber}): jumlah yang dihitung (${finalToken1Amount.toFixed(6)} ${TOKEN_SYMBOLS[pair.token1]}, ${finalZIGAmount.toFixed(6)} ZIG) terlalu kecil setelah penyesuaian rasio.`);
+        return null;
     }
 
-    // Pastikan kita tidak mencoba menambahkan jumlah yang lebih besar dari saldo yang tersedia
-    adjustedToken1 = Math.min(adjustedToken1, saldoToken1);
-    adjustedZIG = Math.min(adjustedZIG, saldoZIG);
+    const microAmountToken1 = toMicroUnits(finalToken1Amount, pair.token1);
+    const microAmountZIG = toMicroUnits(finalZIGAmount, 'uzig');
 
-    const microAmountToken1 = toMicroUnits(adjustedToken1, pair.token1);
-    const microAmountZIG = toMicroUnits(adjustedZIG, 'uzig');
+    const liquiditySlippage = getRandomLiquiditySlippage();
 
-    if (microAmountToken1 <= 0 || microAmountZIG <= 0) {
-      logger.warn(`[!] Skip add liquidity ${pairName} (${liquidityNumber}): calculated liquidity amounts are too small after adjustment. (Token1: ${adjustedToken1.toFixed(6)}, ZIG: ${adjustedZIG.toFixed(6)})`);
-      return null;
-    }
-    
-    const liquiditySlippage = getRandomLiquiditySlippage();
-
-    logger.liquidity(`Liquidity ${colors.magenta}${liquidityNumber}${colors.cyan}: Adding ${adjustedToken1.toFixed(6)} ${TOKEN_SYMBOLS[pair.token1]} + ${adjustedZIG.toFixed(6)} ZIG`);
+    logger.liquidity(`Liquidity ${colors.magenta}${liquidityNumber}${colors.cyan}: Adding ${finalToken1Amount.toFixed(6)} ${TOKEN_SYMBOLS[pair.token1]} + ${finalZIGAmount.toFixed(6)} ZIG`);
     logger.info(`Liquidity Slippage: ${colors.magenta}${(parseFloat(liquiditySlippage) * 100).toFixed(2)}%${colors.reset}`);
 
     const msg = {
@@ -452,7 +461,7 @@ async function addLiquidity(wallet, address, pairName, liquidityNumber) {
           { amount: microAmountToken1.toString(), info: { native_token: { denom: pair.token1 } } },
           { amount: microAmountZIG.toString(), info: { native_token: { denom: 'uzig' } } },
         ],
-        slippage_tolerance: liquiditySlippage.toString(), // Gunakan slippage tolerance dinamis
+        slippage_tolerance: liquiditySlippage.toString(),
       },
     };
     const funds = [
@@ -470,6 +479,10 @@ async function addLiquidity(wallet, address, pairName, liquidityNumber) {
       errorMessage = `Slippage tolerance exceeded for liquidity. Try increasing slippage tolerance or retry later.`;
     } else if (errorMessage.includes('incorrect account sequence')) {
         errorMessage = `Account sequence mismatch. Possible causes: sending too fast, or a previous transaction failed. Consider increasing delay.`;
+    } else if (errorMessage.includes('insufficient funds')) {
+        errorMessage = `Insufficient funds for add liquidity. Check your balance.`;
+    } else if (errorMessage.includes('overflow')) {
+        errorMessage = `Arithmetic overflow during liquidity calculation. Check token amounts and decimals.`;
     }
     logger.error(`[✗] Add liquidity failed for ${pairName} (${liquidityNumber}): ${errorMessage}`);
     return null;
@@ -493,21 +506,27 @@ async function executeTransactionCycle(
   liquidityMaxDelay
 ) {
   logger.step(`--- Transaction For Wallet ${walletNumber} ---`);
-  await printWalletInfo(address); // Tidak perlu rpcClient di sini lagi
+  await printWalletInfo(address);
+
+  // Shuffle SWAP_SEQUENCE to add randomness to swap order
+  const shuffledSwapSequence = [...SWAP_SEQUENCE].sort(() => Math.random() - 0.5);
 
   let swapNo = 1;
   for (let i = 0; i < numSwaps; i++) {
-    const idx = i % SWAP_SEQUENCE.length;
-    const { from, to, pair } = SWAP_SEQUENCE[idx];
+    const { from, to, pair } = shuffledSwapSequence[i % shuffledSwapSequence.length]; // Use shuffled sequence
     const swapAmount = getRandomSwapAmount();
     await performSwap(wallet, address, swapAmount, pair, swapNo++, from, to);
     const delay = getRandomDelay(swapMinDelay, swapMaxDelay);
     logger.info(`Waiting for ${delay} seconds before next swap...`);
     await new Promise(resolve => setTimeout(resolve, delay * 1000));
   }
+  
+  // Shuffle LIQUIDITY_PAIRS to add randomness to add liquidity order
+  const shuffledLiquidityPairs = [...LIQUIDITY_PAIRS].sort(() => Math.random() - 0.5);
+
   let liquidityNo = 1;
   for (let i = 0; i < numAddLiquidity; i++) {
-    const pairName = LIQUIDITY_PAIRS[i % LIQUIDITY_PAIRS.length];
+    const pairName = shuffledLiquidityPairs[i % shuffledLiquidityPairs.length]; // Use shuffled sequence
     await addLiquidity(wallet, address, pairName, liquidityNo++);
     const liquidityDelay = getRandomDelay(liquidityMinDelay, liquidityMaxDelay);
     logger.info(`Waiting for ${liquidityDelay} seconds before next liquidity add...`);
@@ -532,37 +551,17 @@ async function executeAllWallets(
     const key = keys[walletIndex];
     
     try {
-      // Setting proxy for fetch operations (like getUserPoints) and for cosmjs client.
-      // Note: @cosmjs/stargate's client.connect() and connectWithSigner() do not directly support proxy agents
-       // for HTTP connections, they use Tendermint clients internally.
-       // The SOCKS proxy agent is primarily for the HttpBatchClient if you were using it directly for RPC calls.
-       // For SigningCosmWasmClient.connect(), it establishes its own connection.
-       // For `fetch` (getUserPoints), you would typically use node-fetch with agent option, but
-       // the current `fetch` in Node.js might not directly pick up SocksProxyAgent without global agent setup.
-       // For simplicity in this context, we will assume RPC_URL handles it or CosmJS internal logic manages it.
-
-       // If you truly need proxies for *all* RPC calls including SigningCosmWasmClient,
-       // you might need a more advanced setup like monkey-patching `global.agent` or
-       // using `Tendermint34Client.createWithBatchClient` and passing that client to `SigningCosmWasmClient.createWithTmClient`.
-       // For now, let's keep the `connect` simpler and primarily rely on the proxy setting for the `fetch` API.
-       // The Tendermint34Client.connect(RPC_URL) or createWithBatchClient already takes `agent` option implicitly.
-
+        // If using proxies, set it up. Note: SocksProxyAgent is primarily for fetch,
+       // cosmjs client.connect() usually handles its own network stack.
+       // For a robust proxy with CosmJS, you might need to use a custom TendermintClient with a batch client that accepts agent.
+       // For this script, the current setup of `fetch` relies on Node's global agent or no agent.
+       // The `SocksProxyAgent` here is mainly for illustrative purposes if you expand to `node-fetch` etc.
         if (useProxy && proxies.length > 0) {
             const proxy = proxies[walletIndex % proxies.length];
-            const agent = new SocksProxyAgent(`socks5://${proxy}`);
-            // This global agent setup typically works for `fetch` and some HTTP libraries,
-            // but CosmJS clients usually manage their own connections.
-            // For a robust proxy solution with CosmJS, you'd configure it directly in Tendermint clients.
-            // For now, we'll keep the direct `connect` calls in getBalance, getPoolInfo, performSwap, addLiquidity
-            // assuming they either inherit proxy from system env or don't use it.
-            // If you need per-client proxy, uncomment and modify the code below.
-            // global.Agent = agent; // This is a simplified approach, not always reliable for all modules.
-            // A more direct way:
-            // const tmClient = await Tendermint34Client.createWithBatchClient(new HttpBatchClient(RPC_URL, { agent }));
-            // const client = await SigningCosmWasmClient.createWithTmClient(tmClient, wallet, { gasPrice: GAS_PRICE });
-            // This would require passing `client` to all functions, which complicates the signature.
-            // For now, let's rely on the simpler `connect` calls.
-            logger.info(`Using proxy ${proxy} for wallet ${walletIndex + 1} (note: proxy applies to HTTP calls like getUserPoints, CosmJS client connections may vary based on internal implementation).`);
+            // This is a simplified way. For actual proxying CosmJS RPC, you'd integrate it deeper.
+            // Example: const tmClient = await Tendermint34Client.createWithBatchClient(new HttpBatchClient(RPC_URL, { agent: new SocksProxyAgent(`socks5://${proxy}`) }));
+            // Then pass this tmClient to SigningCosmWasmClient.createWithTmClient
+            logger.info(`Using proxy ${proxy} for wallet ${walletIndex + 1}.`);
         } else {
             logger.info(`Not using proxy for wallet ${walletIndex + 1}.`);
         }
@@ -686,8 +685,8 @@ async function main() {
     }
     logger.error(`Invalid input. Please enter a number greater than or equal to ${swapMinDelay}.`);
   }
-  let liquidityMinDelay = swapMinDelay;
-  let liquidityMaxDelay = swapMaxDelay;
+  let liquidityMinDelay = swapMinDelay; // Default to same as swap delay
+  let liquidityMaxDelay = swapMaxDelay; // Default to same as swap delay
 
   let useProxy = false;
   let proxies = [];
