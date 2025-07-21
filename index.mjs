@@ -6,9 +6,7 @@ import pkg_stargate from '@cosmjs/stargate';
 const { GasPrice, coins } = pkg_stargate;
 import pkg_proto_signing from '@cosmjs/proto-signing';
 const { DirectSecp256k1HdWallet, DirectSecp256k1Wallet } = pkg_proto_signing;
-// Removed HttpBatchClient and Tendermint34Client as they are not directly used with current connect method
-// import { HttpBatchClient, Tendermint34Client } from '@cosmjs/tendermint-rpc';
-import { SocksProxyAgent } from 'socks-proxy-agent'; // Still needed if using proxies for fetch or other custom HTTP requests
+import { SocksProxyAgent } from 'socks-proxy-agent';
 
 dotenv.config();
 
@@ -120,16 +118,16 @@ const LIQUIDITY_PAIRS = [
 ];
 
 function getRandomMaxSpread() {
-  // Mengembalikan nilai max_spread antara 1% (0.01) dan 5% (0.05) untuk toleransi yang lebih tinggi
-  const min = 0.01;
-  const max = 0.05; // Diperluas untuk testnet agar lebih jarang error
+  // Mengembalikan nilai max_spread antara 2% (0.02) dan 5% (0.05)
+  const min = 0.02; // Ditingkatkan ke 2%
+  const max = 0.05; // Ditingkatkan ke 5%
   return (Math.random() * (max - min) + min).toFixed(3);
 }
 
 function getRandomLiquiditySlippage() {
-    // Mengembalikan nilai slippage tolerance antara 0.5% (0.005) dan 2% (0.02)
-    const min = 0.005;
-    const max = 0.02; // Diperluas untuk testnet agar lebih jarang error
+    // Mengembalikan nilai slippage tolerance antara 1% (0.01) dan 5% (0.05)
+    const min = 0.01; // Ditingkatkan ke 1%
+    const max = 0.05; // Ditingkatkan ke 5%
     return (Math.random() * (max - min) + min).toFixed(3);
 }
 
@@ -417,7 +415,7 @@ async function addLiquidity(wallet, address, pairName, liquidityNumber) {
     const poolRatio = poolToken1Amount / poolZIGAmount;
 
     // Tentukan berapa persen dari saldo yang ingin ditambahkan ke likuiditas
-    const liquidityPercentage = 0.01; // 1% dari saldo yang tersedia
+    const liquidityPercentage = 0.01; // 1% dari saldo yang tersedia (bisa disesuaikan)
     let targetToken1Amount = saldoToken1 * liquidityPercentage;
     let targetZIGAmount = saldoZIG * liquidityPercentage;
 
@@ -425,8 +423,6 @@ async function addLiquidity(wallet, address, pairName, liquidityNumber) {
     let finalZIGAmount = targetZIGAmount;
 
     // Sesuaikan jumlah agar sesuai rasio pool
-    // Jika rasio koin yang akan ditambahkan tidak sesuai dengan rasio pool
-    // Kita harus membatasi jumlah yang paling 'berlebih' agar sesuai dengan yang 'kurang'
     if (targetToken1Amount / targetZIGAmount > poolRatio) {
         // Kita punya terlalu banyak Token1 relatif terhadap ZIG yang ingin kita tambahkan
         // Batasi Token1 berdasarkan ZIG yang tersedia dan rasio pool
@@ -551,16 +547,8 @@ async function executeAllWallets(
     const key = keys[walletIndex];
     
     try {
-        // If using proxies, set it up. Note: SocksProxyAgent is primarily for fetch,
-       // cosmjs client.connect() usually handles its own network stack.
-       // For a robust proxy with CosmJS, you might need to use a custom TendermintClient with a batch client that accepts agent.
-       // For this script, the current setup of `fetch` relies on Node's global agent or no agent.
-       // The `SocksProxyAgent` here is mainly for illustrative purposes if you expand to `node-fetch` etc.
-        if (useProxy && proxies.length > 0) {
+        if (useProxy && proxies.length > 0) {
             const proxy = proxies[walletIndex % proxies.length];
-            // This is a simplified way. For actual proxying CosmJS RPC, you'd integrate it deeper.
-            // Example: const tmClient = await Tendermint34Client.createWithBatchClient(new HttpBatchClient(RPC_URL, { agent: new SocksProxyAgent(`socks5://${proxy}`) }));
-            // Then pass this tmClient to SigningCosmWasmClient.createWithTmClient
             logger.info(`Using proxy ${proxy} for wallet ${walletIndex + 1}.`);
         } else {
             logger.info(`Not using proxy for wallet ${walletIndex + 1}.`);
@@ -685,8 +673,8 @@ async function main() {
     }
     logger.error(`Invalid input. Please enter a number greater than or equal to ${swapMinDelay}.`);
   }
-  let liquidityMinDelay = swapMinDelay; // Default to same as swap delay
-  let liquidityMaxDelay = swapMaxDelay; // Default to same as swap delay
+  let liquidityMinDelay = swapMinDelay;
+  let liquidityMaxDelay = swapMaxDelay;
 
   let useProxy = false;
   let proxies = [];
