@@ -119,8 +119,8 @@ const LIQUIDITY_PAIRS = [
 
 function getRandomMaxSpread() {
   // Mengembalikan nilai max_spread antara 2% (0.02) dan 8% (0.08)
-  const min = 0.5; 
-  const max = 0.7; // Ditingkatkan untuk mengakomodasi volatilitas testnet
+  const min = 0.4; 
+  const max = 0.5; // Ditingkatkan untuk mengakomodasi volatilitas testnet
   return (Math.random() * (max - min) + min).toFixed(3);
 }
 
