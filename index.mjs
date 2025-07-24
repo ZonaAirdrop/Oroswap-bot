@@ -126,13 +126,13 @@ const LIQUIDITY_PAIRS = [
   'ZMZIG/ZIG',
   'NFA/ZIG',
   'CULTCOIN/ZIG',
-  'ORO/ZIG'
+  [cite_start]'ORO/ZIG' [cite: 21]
 ];
 
 function getRandomMaxSpread() {
   const min = 0.01;
-  const max = 0.02;
-  return (Math.random() * (max - min) + min).toFixed(3);
+  [cite_start]const max = 0.02; [cite: 22]
+  [cite_start]return (Math.random() * (max - min) + min).toFixed(3); [cite: 23]
 }
 
 const rl = createInterface({
@@ -144,31 +144,31 @@ function prompt(question) {
     rl.question(`${colors.blue}${question}${colors.reset}`, (answer) => {
       resolve(answer.trim());
     });
-  });
+  [cite_start]}); [cite: 24, 25]
 }
 
 function isValidNumber(input) {
   const num = parseInt(input);
-  return !isNaN(num) && num > 0;
+  [cite_start]return !isNaN(num) && num > 0; [cite: 26]
 }
 
 function toMicroUnits(amount, denom) {
-  const decimals = TOKEN_DECIMALS[denom] || 6;
-  return Math.floor(parseFloat(amount) * Math.pow(10, decimals));
+  const decimals = TOKEN_DECIMALS[denom] || [cite_start]6; [cite: 26]
+  [cite_start]return Math.floor(parseFloat(amount) * Math.pow(10, decimals)); [cite: 27]
 }
 
 function isMnemonic(input) {
-  const words = input.trim().split(/\s+/);
-  return words.length >= 12 && words.length <= 24 && words.every(word => /^[a-z]+$/.test(word));
+  [cite_start]const words = input.trim().split(/\s+/); [cite: 27]
+  [cite_start]return words.length >= 12 && words.length <= 24 && words.every(word => /^[a-z]+$/.test(word)); [cite: 27]
 }
 
 async function getWallet(key) {
   if (isMnemonic(key)) {
-    return await DirectSecp256k1HdWallet.fromMnemonic(key, { prefix: 'zig' });
+    [cite_start]return await DirectSecp256k1HdWallet.fromMnemonic(key, { prefix: 'zig' }); [cite: 28]
   } else if (/^[0-9a-fA-F]{64}$/.test(key.trim())) {
     return await DirectSecp256k1Wallet.fromKey(Buffer.from(key.trim(), 'hex'), 'zig');
   }
-  throw new Error('Invalid mnemonic/private key');
+  [cite_start]throw new Error('Invalid mnemonic/private key'); [cite: 29, 30]
 }
 
 async function getAccountAddress(wallet) {
@@ -177,101 +177,100 @@ async function getAccountAddress(wallet) {
 }
 
 function getRandomSwapAmount() {
-  const min = 0.01;
-  const max = 0.012;
-  return Math.random() * (max - min) + min;
+  [cite_start]const min = 0.01; [cite: 31]
+  [cite_start]const max = 0.012; [cite: 31]
+  [cite_start]return Math.random() * (max - min) + min; [cite: 32]
 }
 
 function getRandomDelay(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
+  [cite_start]return Math.floor(Math.random() * (max - min + 1)) + min; [cite: 33]
 }
 
 async function getPoolInfo(contractAddress, rpcClient) {
   try {
-    const client = await SigningCosmWasmClient.connectWithSigner(RPC_URL, rpcClient);
-    const poolInfo = await client.queryContractSmart(contractAddress, { pool: {} });
-    return poolInfo;
+    [cite_start]const client = await SigningCosmWasmClient.connectWithSigner(RPC_URL, rpcClient); [cite: 34]
+    [cite_start]const poolInfo = await client.queryContractSmart(contractAddress, { pool: {} }); [cite: 34]
+    [cite_start]return poolInfo; [cite: 35]
   } catch (error) {
-    logger.error(`Failed to get pool info: ${error.message}`);
-    return null;
+    [cite_start]logger.error(`Failed to get pool info: ${error.message}`); [cite: 35]
+    [cite_start]return null; [cite: 36]
   }
 }
 
 async function canSwap(pairName, fromDenom, amount, rpcClient) {
   const pair = TOKEN_PAIRS[pairName];
-  const poolInfo = await getPoolInfo(pair.contract, rpcClient);
+  [cite_start]const poolInfo = await getPoolInfo(pair.contract, rpcClient); [cite: 37]
   if (!poolInfo) {
-    logger.warn(`[!] Tidak bisa cek pool info untuk ${pairName}, swap di-skip.`);
-    return false;
+    [cite_start]logger.warn(`[!] Tidak bisa cek pool info untuk ${pairName}, swap di-skip.`); [cite: 37]
+    [cite_start]return false; [cite: 38]
   }
-  const asset = poolInfo.assets.find(a => a.info.native_token?.denom === fromDenom);
+  [cite_start]const asset = poolInfo.assets.find(a => a.info.native_token?.denom === fromDenom); [cite: 38]
   const poolBalance = asset ?
-  parseFloat(asset.amount) / Math.pow(10, TOKEN_DECIMALS[fromDenom]) : 0;
+  [cite_start]parseFloat(asset.amount) / Math.pow(10, TOKEN_DECIMALS[fromDenom]) : 0; [cite: 39]
   if (poolBalance <= 10 * amount) {
-    logger.warn(`[!] Pool ${pairName} terlalu kecil (${poolBalance} ${fromDenom}), skip swap.`);
-    return false;
+    [cite_start]logger.warn(`[!] Pool ${pairName} terlalu kecil (${poolBalance} ${fromDenom}), skip swap.`); [cite: 39]
+    [cite_start]return false; [cite: 40]
   }
   return true;
 }
 
 async function getBalance(address, denom, rpcClient) {
   try {
-    const client = await SigningCosmWasmClient.connectWithSigner(RPC_URL, rpcClient);
-    const bal = await client.getBalance(address, denom);
-    // Adjusted to ensure all token balances are retrieved correctly
-    return bal && bal.amount ? parseFloat(bal.amount) / Math.pow(10, TOKEN_DECIMALS[denom] || 6) : 0;
+    [cite_start]const client = await SigningCosmWasmClient.connectWithSigner(RPC_URL, rpcClient); [cite: 41]
+    [cite_start]const bal = await client.getBalance(address, denom); [cite: 41]
+    [cite_start]return bal && bal.amount ? parseFloat(bal.amount) / Math.pow(10, TOKEN_DECIMALS[denom] || 6) : 0; [cite: 41, 42]
   } catch (e) {
-    logger.error("Gagal getBalance: " + e.message);
-    return 0;
+    [cite_start]logger.error("Gagal getBalance: " + e.message); [cite: 42]
+    [cite_start]return 0; [cite: 43]
   }
 }
 
 async function getUserPoints(address) {
   try {
-    const response = await fetch(`${API_URL}/user/${address}`);
-    if (!response.ok) return 0;
-    const data = await response.json();
-    if (data && typeof data.point !== 'undefined') return data.point;
-    if (data && data.data && typeof data.data.point !== 'undefined') return data.data.point;
-    return 0;
+    [cite_start]const response = await fetch(`${API_URL}/user/${address}`); [cite: 43]
+    [cite_start]if (!response.ok) return 0; [cite: 43]
+    [cite_start]const data = await response.json(); [cite: 44]
+    [cite_start]if (data && typeof data.point !== 'undefined') return data.point; [cite: 44]
+    [cite_start]if (data && data.data && typeof data.data.point !== 'undefined') return data.data.point; [cite: 45]
+    [cite_start]return 0; [cite: 45]
   } catch (e) {
-    return 0;
+    [cite_start]return 0; [cite: 46]
   }
 }
 
 async function getAllBalances(address, rpcClient) {
-  const denoms = Object.keys(TOKEN_SYMBOLS);
-  const balances = {};
+  [cite_start]const denoms = Object.keys(TOKEN_SYMBOLS); [cite: 47]
+  [cite_start]const balances = {}; [cite: 47]
   for (const denom of denoms) {
-    balances[denom] = await getBalance(address, denom, rpcClient);
+    [cite_start]balances[denom] = await getBalance(address, denom, rpcClient); [cite: 47]
   }
-  return balances;
+  [cite_start]return balances; [cite: 48]
 }
 
 async function printWalletInfo(address, rpcClient) {
-  const points = await getUserPoints(address);
-  logger.info(`Wallet: ${address}`);
-  logger.info(`Points: ${points}`);
-  const balances = await getAllBalances(address, rpcClient);
-  let balanceStr = '[✓] Balance: ';
+  [cite_start]const points = await getUserPoints(address); [cite: 48]
+  [cite_start]logger.info(`Wallet: ${address}`); [cite: 48]
+  [cite_start]logger.info(`Points: ${points}`); [cite: 48]
+  [cite_start]const balances = await getAllBalances(address, rpcClient); [cite: 49]
+  [cite_start]let balanceStr = '[✓] Balance: '; [cite: 49]
   for (const denom of Object.keys(TOKEN_SYMBOLS)) {
-    const symbol = TOKEN_SYMBOLS[denom];
-    const val = balances[denom];
-    balanceStr += `${symbol} ${val.toFixed(6)} | `;
+    [cite_start]const symbol = TOKEN_SYMBOLS[denom]; [cite: 50]
+    [cite_start]const val = balances[denom]; [cite: 50]
+    balanceStr += `${symbol} ${val.toFixed(6)} | [cite_start]`; [cite: 51]
   }
-  balanceStr = balanceStr.replace(/\s\|\s$/, '');
-  logger.info(balanceStr);
-  return { points, balances };
+  [cite_start]balanceStr = balanceStr.replace(/\s\|\s$/, ''); [cite: 51]
+  [cite_start]logger.info(balanceStr); [cite: 51]
+  [cite_start]return { points, balances }; [cite: 52]
 }
 
 function calculateBeliefPrice(poolInfo, pairName, fromDenom) {
   try {
     if (!poolInfo || !poolInfo.assets || poolInfo.assets.length !== 2) {
-      logger.warn(`Belief price fallback to 1 for ${pairName}`);
-      return "1";
+      [cite_start]logger.warn(`Belief price fallback to 1 for ${pairName}`); [cite: 52]
+      [cite_start]return "1"; [cite: 53]
     }
-    const pair = TOKEN_PAIRS[pairName];
-    let amountToken1 = 0, amountToken2 = 0;
+    [cite_start]const pair = TOKEN_PAIRS[pairName]; [cite: 53]
+    [cite_start]let amountToken1 = 0, amountToken2 = 0; [cite: 54]
     poolInfo.assets.forEach(asset => {
       if (asset.info.native_token && asset.info.native_token.denom === pair.token1) {
         amountToken1 = parseFloat(asset.amount) / Math.pow(10, TOKEN_DECIMALS[pair.token1]);
@@ -279,47 +278,47 @@ function calculateBeliefPrice(poolInfo, pairName, fromDenom) {
       if (asset.info.native_token && asset.info.native_token.denom === pair.token2) {
         amountToken2 = parseFloat(asset.amount) / Math.pow(10, TOKEN_DECIMALS[pair.token2]);
       }
-    });
-    let price;
+    [cite_start]}); [cite: 54]
+    [cite_start]let price; [cite: 55]
     // Determine the price based on which token is being swapped from
     if (fromDenom === pair.token1) {
-      price = amountToken2 / amountToken1;
+      [cite_start]price = amountToken2 / amountToken1; [cite: 56]
     } else if (fromDenom === pair.token2) {
-      price = amountToken1 / amountToken2;
+      [cite_start]price = amountToken1 / amountToken2; [cite: 57]
     } else {
-      logger.warn(`Belief price fallback to 1: Unknown 'from' denom ${fromDenom} for pair ${pairName}`);
-      return "1";
+      [cite_start]logger.warn(`Belief price fallback to 1: Unknown 'from' denom ${fromDenom} for pair ${pairName}`); [cite: 57]
+      [cite_start]return "1"; [cite: 58]
     }
 
-    logger.info(`Belief price untuk ${pairName}: ${price.toFixed(18)}`);
-    return price.toFixed(18);
+    [cite_start]logger.info(`Belief price untuk ${pairName}: ${price.toFixed(18)}`); [cite: 58]
+    [cite_start]return price.toFixed(18); [cite: 59]
   } catch (err) {
-    logger.warn(`Belief price fallback to 1 for ${pairName}`);
-    return "1";
+    [cite_start]logger.warn(`Belief price fallback to 1 for ${pairName}`); [cite: 59]
+    [cite_start]return "1"; [cite: 60]
   }
 }
 
 async function performSwap(wallet, address, amount, pairName, swapNumber, fromDenom, toDenom, rpcClient) {
   try {
-    const pair = TOKEN_PAIRS[pairName];
+    [cite_start]const pair = TOKEN_PAIRS[pairName]; [cite: 61]
     if (!pair.contract) {
-      logger.error(`Contract address not set for ${pairName}`);
-      return null;
+      [cite_start]logger.error(`Contract address not set for ${pairName}`); [cite: 61]
+      [cite_start]return null; [cite: 62]
     }
-    const balance = await getBalance(address, fromDenom, rpcClient);
+    [cite_start]const balance = await getBalance(address, fromDenom, rpcClient); [cite: 62]
     if (balance < amount) {
-      logger.warn(`[!] Skip swap ${swapNumber}: saldo ${TOKEN_SYMBOLS[fromDenom] || fromDenom} (${balance.toFixed(6)}) kurang dari swap (${amount.toFixed(6)})`);
-      return null;
+      [cite_start]logger.warn(`[!] Skip swap ${swapNumber}: saldo ${TOKEN_SYMBOLS[fromDenom] || fromDenom} (${balance.toFixed(6)}) kurang dari swap (${amount.toFixed(6)})`); [cite: 63]
+      [cite_start]return null; [cite: 64]
     }
     if (!(await canSwap(pairName, fromDenom, amount, rpcClient))) {
-      logger.warn(`[!] Skip swap ${swapNumber}: pool terlalu kecil untuk swap.`);
-      return null;
+      [cite_start]logger.warn(`[!] Skip swap ${swapNumber}: pool terlalu kecil untuk swap.`); [cite: 64]
+      [cite_start]return null; [cite: 65]
     }
-    const client = await SigningCosmWasmClient.connectWithSigner(RPC_URL, wallet, { gasPrice: GAS_PRICE });
-    const microAmount = toMicroUnits(amount, fromDenom);
-    const poolInfo = await getPoolInfo(pair.contract, rpcClient);
-    const beliefPrice = calculateBeliefPrice(poolInfo, pairName, fromDenom);
-    const maxSpread = "0.5";
+    [cite_start]const client = await SigningCosmWasmClient.connectWithSigner(RPC_URL, wallet, { gasPrice: GAS_PRICE }); [cite: 65]
+    [cite_start]const microAmount = toMicroUnits(amount, fromDenom); [cite: 66]
+    [cite_start]const poolInfo = await getPoolInfo(pair.contract, rpcClient); [cite: 66]
+    [cite_start]const beliefPrice = calculateBeliefPrice(poolInfo, pairName, fromDenom); [cite: 66]
+    [cite_start]const maxSpread = "0.5"; [cite: 67]
     const msg = {
       swap: {
         belief_price: beliefPrice,
@@ -329,71 +328,71 @@ async function performSwap(wallet, address, amount, pairName, swapNumber, fromDe
           info: { native_token: { denom: fromDenom } },
         },
       },
-    };
-    const funds = coins(microAmount, fromDenom);
-    const fromSymbol = TOKEN_SYMBOLS[fromDenom] || fromDenom;
-    const toSymbol = TOKEN_SYMBOLS[toDenom] || toDenom;
-    logger.swap(`Swap ${colors.magenta}${swapNumber}${colors.cyan}: ${amount.toFixed(5)} ${fromSymbol} -> ${toSymbol}`);
-    logger.info(`Max spread swap: ${colors.magenta}${maxSpread}${colors.reset}`);
-    const result = await client.execute(address, pair.contract, msg, 'auto', 'Swap', funds);
-    logger.swapSuccess(`Complete swap ${colors.magenta}${swapNumber}${colors.green}: ${fromSymbol} -> ${toSymbol} | Tx: ${EXPLORER_URL}${result.transactionHash}`);
-    return result;
+    [cite_start]}; [cite: 67]
+    [cite_start]const funds = coins(microAmount, fromDenom); [cite: 68]
+    [cite_start]const fromSymbol = TOKEN_SYMBOLS[fromDenom] || fromDenom; [cite: 68]
+    [cite_start]const toSymbol = TOKEN_SYMBOLS[toDenom] || toDenom; [cite: 68]
+    [cite_start]logger.swap(`Swap ${colors.magenta}${swapNumber}${colors.cyan}: ${amount.toFixed(5)} ${fromSymbol} -> ${toSymbol}`); [cite: 69]
+    [cite_start]logger.info(`Max spread swap: ${colors.magenta}${maxSpread}${colors.reset}`); [cite: 69]
+    [cite_start]const result = await client.execute(address, pair.contract, msg, 'auto', 'Swap', funds); [cite: 69]
+    [cite_start]logger.swapSuccess(`Complete swap ${colors.magenta}${swapNumber}${colors.green}: ${fromSymbol} -> ${toSymbol} | Tx: ${EXPLORER_URL}${result.transactionHash}`); [cite: 70]
+    [cite_start]return result; [cite: 70]
   } catch (error) {
-    logger.error(`Swap ${swapNumber} failed: ${error.message}`);
-    return null;
+    [cite_start]logger.error(`Swap ${swapNumber} failed: ${error.message}`); [cite: 71]
+    [cite_start]return null; [cite: 72]
   }
 }
 
 async function addLiquidity(wallet, address, pairName, liquidityNumber, rpcClient) {
   try {
-    const pair = TOKEN_PAIRS[pairName];
+    [cite_start]const pair = TOKEN_PAIRS[pairName]; [cite: 72]
     if (!pair.contract) {
-      logger.error(`Contract address not set for ${pairName}`);
-      return null;
+      [cite_start]logger.error(`Contract address not set for ${pairName}`); [cite: 73]
+      [cite_start]return null; [cite: 74]
     }
-    const saldoToken1 = await getBalance(address, pair.token1, rpcClient);
-    const saldoZIG = await getBalance(address, 'uzig', rpcClient);
+    [cite_start]const saldoToken1 = await getBalance(address, pair.token1, rpcClient); [cite: 74]
+    [cite_start]const saldoZIG = await getBalance(address, 'uzig', rpcClient); [cite: 74]
     if (saldoToken1 === 0 || saldoZIG === 0) {
-      logger.warn(`Skip add liquidity ${pairName}: saldo kurang`);
-      return null;
+      [cite_start]logger.warn(`Skip add liquidity ${pairName}: saldo kurang`); [cite: 75]
+      [cite_start]return null; [cite: 76]
     }
 
-    const LIQUIDITY_PERCENTAGE = 0.003;
-    const token1Amount = saldoToken1 * LIQUIDITY_PERCENTAGE;
-    const zigAmount = saldoZIG * LIQUIDITY_PERCENTAGE;
-    const poolInfo = await getPoolInfo(pair.contract, rpcClient);
+    [cite_start]const LIQUIDITY_PERCENTAGE = 0.003; [cite: 76, 77]
+    [cite_start]const token1Amount = saldoToken1 * LIQUIDITY_PERCENTAGE; [cite: 77]
+    [cite_start]const zigAmount = saldoZIG * LIQUIDITY_PERCENTAGE; [cite: 77]
+    [cite_start]const poolInfo = await getPoolInfo(pair.contract, rpcClient); [cite: 78]
     if (!poolInfo) {
-      logger.warn(`Skip add liquidity ${pairName}: pool info tidak didapat`);
-      return null;
+      [cite_start]logger.warn(`Skip add liquidity ${pairName}: pool info tidak didapat`); [cite: 78]
+      [cite_start]return null; [cite: 79]
     }
 
-    const poolAsset1 = poolInfo.assets.find(asset => asset.info.native_token.denom === pair.token1);
-    const poolAsset2 = poolInfo.assets.find(asset => asset.info.native_token.denom === pair.token2);
+    [cite_start]const poolAsset1 = poolInfo.assets.find(asset => asset.info.native_token.denom === pair.token1); [cite: 79]
+    [cite_start]const poolAsset2 = poolInfo.assets.find(asset => asset.info.native_token.denom === pair.token2); [cite: 80]
 
     if (!poolAsset1 || !poolAsset2) {
-      logger.warn(`Skip add liquidity ${pairName}: one of the pool assets not found`);
-      return null;
+      [cite_start]logger.warn(`Skip add liquidity ${pairName}: one of the pool assets not found`); [cite: 80]
+      [cite_start]return null; [cite: 81]
     }
 
-    const poolToken1 = parseFloat(poolAsset1.amount) / Math.pow(10, TOKEN_DECIMALS[pair.token1]);
-    const poolZIG = parseFloat(poolAsset2.amount) / Math.pow(10, TOKEN_DECIMALS['uzig']);
-    const ratio = poolToken1 / poolZIG;
-    let adjustedToken1 = token1Amount;
-    let adjustedZIG = zigAmount;
+    [cite_start]const poolToken1 = parseFloat(poolAsset1.amount) / Math.pow(10, TOKEN_DECIMALS[pair.token1]); [cite: 81]
+    [cite_start]const poolZIG = parseFloat(poolAsset2.amount) / Math.pow(10, TOKEN_DECIMALS['uzig']); [cite: 82]
+    [cite_start]const ratio = poolToken1 / poolZIG; [cite: 82]
+    [cite_start]let adjustedToken1 = token1Amount; [cite: 82]
+    [cite_start]let adjustedZIG = zigAmount; [cite: 82]
     if (token1Amount / zigAmount > ratio) {
-      adjustedToken1 = zigAmount * ratio;
+      [cite_start]adjustedToken1 = zigAmount * ratio; [cite: 83]
     } else {
-      adjustedZIG = token1Amount / ratio;
+      [cite_start]adjustedZIG = token1Amount / ratio; [cite: 84]
     }
 
-    const microAmountToken1 = toMicroUnits(adjustedToken1, pair.token1);
-    const microAmountZIG = toMicroUnits(adjustedZIG, 'uzig');
+    [cite_start]const microAmountToken1 = toMicroUnits(adjustedToken1, pair.token1); [cite: 85]
+    [cite_start]const microAmountZIG = toMicroUnits(adjustedZIG, 'uzig'); [cite: 85]
     if (microAmountToken1 <= 0 || microAmountZIG <= 0) {
-      logger.warn(`Skip add liquidity ${pairName}: calculated liquidity amounts are too small.`);
-      return null;
+      [cite_start]logger.warn(`Skip add liquidity ${pairName}: calculated liquidity amounts are too small.`); [cite: 86]
+      [cite_start]return null; [cite: 87]
     }
 
-    logger.liquidity(`Liquidity ${colors.magenta}${liquidityNumber}${colors.cyan}: Adding (${(LIQUIDITY_PERCENTAGE * 100).toFixed(1)}%) ${adjustedToken1.toFixed(6)} ${TOKEN_SYMBOLS[pair.token1]} + ${adjustedZIG.toFixed(6)} ZIG`);
+    [cite_start]logger.liquidity(`Liquidity ${colors.magenta}${liquidityNumber}${colors.cyan}: Adding (${(LIQUIDITY_PERCENTAGE * 100).toFixed(1)}%) ${adjustedToken1.toFixed(6)} ${TOKEN_SYMBOLS[pair.token1]} + ${adjustedZIG.toFixed(6)} ZIG`); [cite: 87]
     const msg = {
       provide_liquidity: {
         assets: [
@@ -402,25 +401,25 @@ async function addLiquidity(wallet, address, pairName, liquidityNumber, rpcClien
         ],
         slippage_tolerance: "0.5",
       },
-    };
+    [cite_start]}; [cite: 88]
     const funds = [
       { denom: pair.token1, amount: microAmountToken1.toString() },
       { denom: 'uzig', amount: microAmountZIG.toString() }
-    ];
-    const client = await SigningCosmWasmClient.connectWithSigner(RPC_URL, wallet, { gasPrice: GAS_PRICE });
-    const result = await client.execute(address, pair.contract, msg, 'auto', `Adding ${pairName} Liquidity`, funds);
-    logger.success(`Liquidity added for ${pairName}! Tx: ${EXPLORER_URL}${result.transactionHash}`);
-    logger.liquiditySuccess(`Add Liquidity ${colors.magenta}${liquidityNumber}${colors.green} Completed for ${pairName}`);
+    [cite_start]]; [cite: 89]
+    [cite_start]const client = await SigningCosmWasmClient.connectWithSigner(RPC_URL, wallet, { gasPrice: GAS_PRICE }); [cite: 90]
+    [cite_start]const result = await client.execute(address, pair.contract, msg, 'auto', `Adding ${pairName} Liquidity`, funds); [cite: 91]
+    [cite_start]logger.success(`Liquidity added for ${pairName}! Tx: ${EXPLORER_URL}${result.transactionHash}`); [cite: 91]
+    [cite_start]logger.liquiditySuccess(`Add Liquidity ${colors.magenta}${liquidityNumber}${colors.green} Completed for ${pairName}`); [cite: 92]
     return result;
   } catch (error) {
-    logger.error(`Add liquidity failed for ${pairName}: ${error.message}`);
-    return null;
+    [cite_start]logger.error(`Add liquidity failed for ${pairName}: ${error.message}`); [cite: 92]
+    [cite_start]return null; [cite: 93]
   }
 }
 
 async function displayCountdown(hours, minutes, seconds) {
-  const timeStr = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-  process.stdout.write(`\r${colors.cyan}[🧭] Next execution in: ${timeStr}${colors.reset}`);
+  [cite_start]const timeStr = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`; [cite: 94]
+  [cite_start]process.stdout.write(`\r${colors.cyan}[🧭] Next execution in: ${timeStr}${colors.reset}`); [cite: 94]
 }
 
 async function executeTransactionCycle(
@@ -435,26 +434,26 @@ async function executeTransactionCycle(
   liquidityMaxDelay,
   rpcClient
 ) {
-  logger.step(`--- Transaction For Wallet ${walletNumber} ---`);
-  await printWalletInfo(address, rpcClient);
+  [cite_start]logger.step(`--- Transaction For Wallet ${walletNumber} ---`); [cite: 95]
+  [cite_start]await printWalletInfo(address, rpcClient); [cite: 95]
 
   let swapNo = 1;
   for (let i = 0; i < numSwaps; i++) {
-    const idx = i % SWAP_SEQUENCE.length;
-    const { from, to, pair } = SWAP_SEQUENCE[idx];
-    const swapAmount = getRandomSwapAmount();
-    await performSwap(wallet, address, swapAmount, pair, swapNo++, from, to, rpcClient);
-    const delay = getRandomDelay(swapMinDelay, swapMaxDelay);
-    await new Promise(resolve => setTimeout(resolve, delay * 1000));
+    [cite_start]const idx = i % SWAP_SEQUENCE.length; [cite: 96]
+    [cite_start]const { from, to, pair } = SWAP_SEQUENCE[idx]; [cite: 96]
+    [cite_start]const swapAmount = getRandomSwapAmount(); [cite: 97]
+    [cite_start]await performSwap(wallet, address, swapAmount, pair, swapNo++, from, to, rpcClient); [cite: 97]
+    [cite_start]const delay = getRandomDelay(swapMinDelay, swapMaxDelay); [cite: 97]
+    [cite_start]await new Promise(resolve => setTimeout(resolve, delay * 1000)); [cite: 98]
   }
-  let liquidityNo = 1;
+  [cite_start]let liquidityNo = 1; [cite: 98]
   for (let i = 0; i < numAddLiquidity; i++) {
-    const pairName = LIQUIDITY_PAIRS[i % LIQUIDITY_PAIRS.length];
-    await addLiquidity(wallet, address, pairName, liquidityNo++, rpcClient);
-    const liquidityDelay = getRandomDelay(liquidityMinDelay, liquidityMaxDelay);
-    await new Promise(resolve => setTimeout(resolve, liquidityDelay * 1000));
+    [cite_start]const pairName = LIQUIDITY_PAIRS[i % LIQUIDITY_PAIRS.length]; [cite: 99]
+    [cite_start]await addLiquidity(wallet, address, pairName, liquidityNo++, rpcClient); [cite: 100]
+    [cite_start]const liquidityDelay = getRandomDelay(liquidityMinDelay, liquidityMaxDelay); [cite: 100]
+    [cite_start]await new Promise(resolve => setTimeout(resolve, liquidityDelay * 1000)); [cite: 101]
   }
-  logger.info(`Transaction cycle finished for wallet ${walletNumber}`);
+  [cite_start]logger.info(`Transaction cycle finished for wallet ${walletNumber}`); [cite: 101]
   console.log();
 }
 
@@ -470,22 +469,22 @@ async function executeAllWallets(
   useProxy
 ) {
   for (let walletIndex = 0; walletIndex < keys.length; walletIndex++) {
-    const key = keys[walletIndex];
-    let rpcClient = null;
+    [cite_start]const key = keys[walletIndex]; [cite: 102]
+    [cite_start]let rpcClient = null; [cite: 102]
     
     try {
       if (useProxy && proxies.length > 0) {
-        const proxy = proxies[walletIndex % proxies.length];
-        const agent = new SocksProxyAgent(`socks5://${proxy}`);
-        rpcClient = await Tendermint34Client.createWithBatchClient(new HttpBatchClient(RPC_URL, { agent }));
-        logger.info(`Using proxy ${proxy} for wallet ${walletIndex + 1}`);
+        [cite_start]const proxy = proxies[walletIndex % proxies.length]; [cite: 103]
+        [cite_start]const agent = new SocksProxyAgent(`socks5://${proxy}`); [cite: 103]
+        [cite_start]rpcClient = await Tendermint34Client.createWithBatchClient(new HttpBatchClient(RPC_URL, { agent })); [cite: 103]
+        [cite_start]logger.info(`Using proxy ${proxy} for wallet ${walletIndex + 1}`); [cite: 104]
       } else {
-        rpcClient = await Tendermint34Client.connect(RPC_URL);
+        [cite_start]rpcClient = await Tendermint34Client.connect(RPC_URL); [cite: 104, 105]
       }
 
-      const wallet = await getWallet(key);
-      const address = await getAccountAddress(wallet);
-      logger.step(`Processing wallet: ${address} (wallet ${walletIndex + 1})`);
+      [cite_start]const wallet = await getWallet(key); [cite: 105]
+      [cite_start]const address = await getAccountAddress(wallet); [cite: 105]
+      [cite_start]logger.step(`Processing wallet: ${address} (wallet ${walletIndex + 1})`); [cite: 106]
       
       await executeTransactionCycle(
         wallet,
@@ -498,16 +497,16 @@ async function executeAllWallets(
         liquidityMinDelay,
         liquidityMaxDelay,
         rpcClient
-      );
-      logger.success(`All transactions completed for wallet ${walletIndex + 1}!`);
+      [cite_start]); [cite: 106]
+      [cite_start]logger.success(`All transactions completed for wallet ${walletIndex + 1}!`); [cite: 107]
       if (walletIndex < keys.length - 1) {
-        console.log();
+        [cite_start]console.log(); [cite: 107, 108]
       }
     } catch (error) {
-      logger.error(`Error processing wallet ${walletIndex + 1}: ${error.message}`);
+      [cite_start]logger.error(`Error processing wallet ${walletIndex + 1}: ${error.message}`); [cite: 108]
     } finally {
       if (rpcClient) {
-        rpcClient.disconnect();
+        [cite_start]rpcClient.disconnect(); [cite: 109, 110]
       }
     }
   }
@@ -524,20 +523,20 @@ async function startDailyCountdown(
   proxies,
   useProxy
 ) {
-  const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+  [cite_start]const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000; [cite: 111]
   while (true) {
-    const startTime = Date.now();
-    const endTime = startTime + TWENTY_FOUR_HOURS;
+    [cite_start]const startTime = Date.now(); [cite: 111]
+    [cite_start]const endTime = startTime + TWENTY_FOUR_HOURS; [cite: 112]
     while (Date.now() < endTime) {
-      const remaining = endTime - Date.now();
-      const hours = Math.floor(remaining / (1000 * 60 * 60));
-      const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
-      displayCountdown(hours, minutes, seconds);
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      [cite_start]const remaining = endTime - Date.now(); [cite: 112]
+      [cite_start]const hours = Math.floor(remaining / (1000 * 60 * 60)); [cite: 113]
+      [cite_start]const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60)); [cite: 114]
+      [cite_start]const seconds = Math.floor((remaining % (1000 * 60)) / 1000); [cite: 115]
+      [cite_start]displayCountdown(hours, minutes, seconds); [cite: 115]
+      [cite_start]await new Promise(resolve => setTimeout(resolve, 1000)); [cite: 116]
     }
     console.log('\n');
-    logger.success('🧭 24 hours completed! Starting new transaction cycle...\n');
+    [cite_start]logger.success('🧭 24 hours completed! Starting new transaction cycle...\n'); [cite: 116]
     await executeAllWallets(
       keys,
       numSwaps,
@@ -548,17 +547,17 @@ async function startDailyCountdown(
       liquidityMaxDelay,
       proxies,
       useProxy
-    );
+    [cite_start]); [cite: 117]
   }
 }
 
 async function loadProxies() {
     try {
-        const data = await readFile('proxy.txt', 'utf8');
-        return data.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+        [cite_start]const data = await readFile('proxy.txt', 'utf8'); [cite: 118]
+        [cite_start]return data.split('\n').map(line => line.trim()).filter(line => line.length > 0); [cite: 119]
     } catch (error) {
-        logger.warn("proxy.txt not found or could not be read. Proceeding without proxies (if chosen).");
-        return [];
+        [cite_start]logger.warn("proxy.txt not found or could not be read. Proceeding without proxies (if chosen)."); [cite: 119]
+        [cite_start]return []; [cite: 120]
     }
 }
 
@@ -566,76 +565,76 @@ async function main() {
   await display_welcome_screen();
   const keys = Object.keys(process.env)
     .filter((key) => key.startsWith('PRIVATE_KEY_'))
-    .map((key) => process.env[key]);
+    [cite_start].map((key) => process.env[key]); [cite: 121]
   if (keys.length === 0) {
-    logger.error('No private keys or mnemonics found in .env file');
-    rl.close();
-    return;
+    [cite_start]logger.error('No private keys or mnemonics found in .env file'); [cite: 121]
+    [cite_start]rl.close(); [cite: 121]
+    [cite_start]return; [cite: 122]
   }
   let numSwaps;
   while (true) {
-    const input = await prompt('Number of swaps per wallet: ');
+    [cite_start]const input = await prompt('Number of swaps per wallet: '); [cite: 123]
     if (isValidNumber(input)) {
-      numSwaps = parseInt(input);
-      break;
+      [cite_start]numSwaps = parseInt(input); [cite: 123]
+      [cite_start]break; [cite: 124]
     }
-    logger.error('Invalid input. Please enter a positive number.');
+    [cite_start]logger.error('Invalid input. Please enter a positive number.'); [cite: 124]
   }
-  let numAddLiquidity;
+  [cite_start]let numAddLiquidity; [cite: 125]
   while (true) {
-    const input = await prompt('Number of add liquidity per wallet: ');
+    [cite_start]const input = await prompt('Number of add liquidity per wallet: '); [cite: 126]
     if (isValidNumber(input)) {
-      numAddLiquidity = parseInt(input);
-      break;
+      [cite_start]numAddLiquidity = parseInt(input); [cite: 126]
+      [cite_start]break; [cite: 127]
     }
-    logger.error('Invalid input. Please enter a positive number.');
+    [cite_start]logger.error('Invalid input. Please enter a positive number.'); [cite: 127]
   }
-  let swapMinDelay, swapMaxDelay;
+  [cite_start]let swapMinDelay, swapMaxDelay; [cite: 128]
   while (true) {
-    const input = await prompt('Min delay between transactions (seconds): ');
+    [cite_start]const input = await prompt('Min delay between transactions (seconds): '); [cite: 129]
     if (isValidNumber(input)) {
-      swapMinDelay = parseInt(input);
-      break;
+      [cite_start]swapMinDelay = parseInt(input); [cite: 129]
+      [cite_start]break; [cite: 130]
     }
-    logger.error('Invalid input. Please enter a positive number.');
+    [cite_start]logger.error('Invalid input. Please enter a positive number.'); [cite: 130, 131]
   }
   while (true) {
-    const input = await prompt('Max delay between transactions (seconds): ');
+    [cite_start]const input = await prompt('Max delay between transactions (seconds): '); [cite: 132]
     if (isValidNumber(input) && parseInt(input) >= swapMinDelay) {
-      swapMaxDelay = parseInt(input);
-      break;
+      [cite_start]swapMaxDelay = parseInt(input); [cite: 132]
+      [cite_start]break; [cite: 133]
     }
-    logger.error(`Invalid input. Please enter a number greater than or equal to ${swapMinDelay}.`);
+    [cite_start]logger.error(`Invalid input. Please enter a number greater than or equal to ${swapMinDelay}.`); [cite: 133, 134]
   }
-  let liquidityMinDelay = swapMinDelay;
+  [cite_start]let liquidityMinDelay = swapMinDelay; [cite: 134]
   let liquidityMaxDelay = swapMaxDelay;
 
   let useProxy = false;
-  let proxies = [];
+  [cite_start]let proxies = []; [cite: 135]
   while (true) {
-    console.log(`${colors.blue}Choose proxy type:${colors.reset}`);
-    console.log(`${colors.blue}1. Private Proxy (from proxy.txt)${colors.reset}`);
-    console.log(`${colors.blue}2. No Proxy${colors.reset}`);
-    const choice = await prompt('Enter choice (1 or 2): ');
+    [cite_start]console.log(`${colors.blue}Choose proxy type:${colors.reset}`); [cite: 135]
+    [cite_start]console.log(`${colors.blue}1. Private Proxy (from proxy.txt)${colors.reset}`); [cite: 135]
+    [cite_start]console.log(`${colors.blue}2. No Proxy${colors.reset}`); [cite: 136]
+    [cite_start]const choice = await prompt('Enter choice (1 or 2): '); [cite: 136]
     if (choice === '1') {
-      proxies = await loadProxies();
+      [cite_start]proxies = await loadProxies(); [cite: 137]
       if (proxies.length === 0) {
-        logger.warn('No proxies found in proxy.txt. Please add proxies or choose "No Proxy".');
-        continue;
+        [cite_start]logger.warn('No proxies found in proxy.txt. Please add proxies or choose "No Proxy".'); [cite: 138]
+        [cite_start]continue; [cite: 139]
       }
       useProxy = true;
       logger.info('Proceeding with private proxies.');
-      break;
+      [cite_start]break; [cite: 140]
     } else if (choice === '2') {
       useProxy = false;
       logger.info('Proceeding without proxies.');
-      break;
+      [cite_start]break; [cite: 141]
     } else {
       logger.error('Invalid choice. Please enter 1 or 2.');
     }
   }
 
-  console.log();
+  [cite_start]console.log(); [cite: 141]
   await executeAllWallets(
     keys,
     numSwaps,
@@ -646,7 +645,7 @@ async function main() {
     liquidityMaxDelay,
     proxies,
     useProxy
-  );
+  [cite_start]); [cite: 142]
   await startDailyCountdown(
     keys,
     numSwaps,
@@ -657,7 +656,7 @@ async function main() {
     liquidityMaxDelay,
     proxies,
     useProxy
-  );
+  [cite_start]); [cite: 143]
 }
 
 main().catch((error) => {
