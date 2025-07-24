@@ -137,8 +137,11 @@ const LIQUIDITY_PAIRS = [
 
 
 function getRandomMaxSpread() {
-    const min = 0.01;
-    const max = 0.02;
+    // Diatur ke rentang yang lebih luas untuk meningkatkan kemungkinan sukses,
+    // karena 0.01-0.02 terlalu ketat untuk beberapa kondisi pool.
+    // Anda bisa menyesuaikan ini berdasarkan pengalaman di testnet.
+    const min = 0.05; // 5%
+    const max = 0.1;  // 10%
     return (Math.random() * (max - min) + min).toFixed(3);
 }
 
@@ -194,19 +197,18 @@ function getRandomDelay(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-async function getPoolInfo(contractAddress) { // rpcClient tidak diperlukan di sini karena connectWithSigner akan membuat instance baru
+async function getPoolInfo(contractAddress) {
     try {
-        // Gunakan client sementara untuk query (tidak perlu signer di sini)
-        const client = await SigningCosmWasmClient.connect(RPC_URL); 
+        const client = await SigningCosmWasmClient.connect(RPC_URL);
         const poolInfo = await client.queryContractSmart(contractAddress, { pool: {} });
         return poolInfo;
     } catch (error) {
-        logger.error(`Failed to get pool info: ${error.message}`);
+        logger.error(`Failed to get pool info for ${contractAddress}: ${error.message}`);
         return null;
     }
 }
 
-async function canSwap(pairName, fromDenom, amount) { // rpcClient tidak diperlukan di sini
+async function canSwap(pairName, fromDenom, amount) {
     const pair = TOKEN_PAIRS[pairName];
     const poolInfo = await getPoolInfo(pair.contract);
     if (!poolInfo) {
@@ -223,13 +225,13 @@ async function canSwap(pairName, fromDenom, amount) { // rpcClient tidak diperlu
     return true;
 }
 
-async function getBalance(address, denom) { // rpcClient tidak diperlukan di sini
+async function getBalance(address, denom) {
     try {
         const client = await SigningCosmWasmClient.connect(RPC_URL);
         const bal = await client.getBalance(address, denom);
         return bal && bal.amount ? parseFloat(bal.amount) / Math.pow(10, TOKEN_DECIMALS[denom] || 6) : 0;
     } catch (e) {
-        logger.error("Gagal getBalance: " + e.message);
+        logger.error(`Gagal getBalance untuk ${address} (${denom}): ${e.message}`);
         return 0;
     }
 }
@@ -237,18 +239,22 @@ async function getBalance(address, denom) { // rpcClient tidak diperlukan di sin
 async function getUserPoints(address) {
     try {
         const response = await fetch(`${API_URL}/user/${address}`);
-        if (!response.ok) return 0;
+        if (!response.ok) {
+            logger.warn(`Failed to fetch user points for ${address}: HTTP status ${response.status}`);
+            return 0;
+        }
         const data = await response.json();
         if (data && typeof data.point !== 'undefined') return data.point;
         if (data && data.data && typeof data.data.point !== 'undefined') return data.data.point;
+        logger.warn(`Unexpected response structure for user points of ${address}. Data: ${JSON.stringify(data)}`);
         return 0;
     } catch (e) {
-        logger.error(`Failed to get user points: ${e.message}`); // Tambahkan log error
+        logger.error(`Failed to get user points for ${address}: ${e.message}`);
         return 0;
     }
 }
 
-async function getAllBalances(address) { // rpcClient tidak diperlukan di sini
+async function getAllBalances(address) {
     const denoms = Object.keys(TOKEN_SYMBOLS);
     const balances = {};
     for (const denom of denoms) {
@@ -257,7 +263,7 @@ async function getAllBalances(address) { // rpcClient tidak diperlukan di sini
     return balances;
 }
 
-async function printWalletInfo(address) { // rpcClient tidak diperlukan di sini
+async function printWalletInfo(address) {
     const points = await getUserPoints(address);
     logger.info(`Wallet: ${address}`);
     logger.info(`Points: ${points}`);
@@ -276,7 +282,7 @@ async function printWalletInfo(address) { // rpcClient tidak diperlukan di sini
 function calculateBeliefPrice(poolInfo, pairName, fromDenom) {
     try {
         if (!poolInfo || !poolInfo.assets || poolInfo.assets.length !== 2) {
-            logger.warn(`Belief price fallback to 1 for ${pairName}`);
+            logger.warn(`Belief price fallback to 1 for ${pairName}: Invalid pool info.`);
             return "1";
         }
         const pair = TOKEN_PAIRS[pairName];
@@ -290,7 +296,6 @@ function calculateBeliefPrice(poolInfo, pairName, fromDenom) {
             }
         });
         let price;
-        // Determine the price based on which token is being swapped from
         if (fromDenom === pair.token1) {
             price = amountToken2 / amountToken1;
         } else if (fromDenom === pair.token2) {
@@ -299,11 +304,9 @@ function calculateBeliefPrice(poolInfo, pairName, fromDenom) {
             logger.warn(`Belief price fallback to 1: Unknown 'from' denom ${fromDenom} for pair ${pairName}`);
             return "1";
         }
-
-        // logger.info(`Belief price untuk ${pairName}: ${price.toFixed(18)}`); // Hanya log jika perlu debugging
         return price.toFixed(18);
     } catch (err) {
-        logger.warn(`Belief price fallback to 1 for ${pairName}: ${err.message}`); // Lebih spesifik
+        logger.warn(`Belief price fallback to 1 for ${pairName}: ${err.message}`);
         return "1";
     }
 }
@@ -320,23 +323,26 @@ async function performSwap(wallet, address, amount, pairName, swapNumber, fromDe
                 return null;
             }
 
-            const balance = await getBalance(address, fromDenom); // Ambil saldo terbaru
+            const balance = await getBalance(address, fromDenom);
             if (balance < amount) {
                 logger.warn(`[!] Skip swap ${swapNumber}: saldo ${TOKEN_SYMBOLS[fromDenom] || fromDenom} (${balance.toFixed(6)}) kurang dari swap (${amount.toFixed(6)})`);
                 return null;
             }
-            if (!(await canSwap(pairName, fromDenom, amount))) { // Cek pool info terbaru
+            if (!(await canSwap(pairName, fromDenom, amount))) {
                 logger.warn(`[!] Skip swap ${swapNumber}: pool terlalu kecil untuk swap.`);
                 return null;
             }
 
-            // Client baru diambil setiap kali, ini sudah bagus untuk memastikan sinkronisasi sequence number
             const client = await SigningCosmWasmClient.connectWithSigner(RPC_URL, wallet, { gasPrice: GAS_PRICE });
 
             const microAmount = toMicroUnits(amount, fromDenom);
-            const poolInfo = await getPoolInfo(pair.contract); // Ambil pool info terbaru
+            const poolInfo = await getPoolInfo(pair.contract);
             const beliefPrice = calculateBeliefPrice(poolInfo, pairName, fromDenom);
-            const maxSpread = getRandomMaxSpread(); // Gunakan spread acak
+            
+            // --- INI PERUBAHAN UTAMA UNTUK MAX_SPREAD ---
+            const maxSpread = getRandomMaxSpread(); // Menggunakan nilai acak yang lebih realistis
+            // --- END PERUBAHAN UTAMA ---
+
             const msg = {
                 swap: {
                     belief_price: beliefPrice,
@@ -358,15 +364,15 @@ async function performSwap(wallet, address, amount, pairName, swapNumber, fromDe
             return result;
         } catch (error) {
             logger.error(`Swap ${swapNumber} failed: ${error.message}`);
-            if (error.message.includes('account sequence mismatch') || error.message.includes('transaction already in mempool')) {
+            if (error.message.includes('account sequence mismatch') || error.message.includes('transaction already in mempool') || error.message.includes('max_spread assertion failed')) {
                 retries++;
                 if (retries < MAX_RETRIES) {
-                    logger.warn(`Retrying swap ${swapNumber} due to account sequence mismatch/mempool issue (attempt ${retries}/${MAX_RETRIES})...`);
-                    await new Promise(resolve => setTimeout(resolve, 5000 + retries * 2000)); // Penundaan lebih lama untuk retry
-                    continue; // Coba lagi
+                    logger.warn(`Retrying swap ${swapNumber} due to ${error.message.includes('account sequence mismatch') ? 'account sequence mismatch' : error.message.includes('transaction already in mempool') ? 'mempool issue' : 'max_spread assertion failed'} (attempt ${retries}/${MAX_RETRIES})...`);
+                    await new Promise(resolve => setTimeout(resolve, 5000 + retries * 2000));
+                    continue;
                 }
             }
-            return null; // Keluar setelah max retries atau error lainnya
+            return null;
         }
     }
     logger.error(`Swap ${swapNumber} failed after ${MAX_RETRIES} retries.`);
@@ -392,7 +398,7 @@ async function addLiquidity(wallet, address, pairName, liquidityNumber) {
                 return null;
             }
 
-            const LIQUIDITY_PERCENTAGE = 0.003; // Mengubah 5% menjadi 0.3%
+            const LIQUIDITY_PERCENTAGE = 0.003;
             const token1Amount = saldoToken1 * LIQUIDITY_PERCENTAGE;
             const zigAmount = saldoZIG * LIQUIDITY_PERCENTAGE;
 
@@ -406,7 +412,7 @@ async function addLiquidity(wallet, address, pairName, liquidityNumber) {
             const poolAsset2 = poolInfo.assets.find(asset => asset.info.native_token.denom === pair.token2);
 
             if (!poolAsset1 || !poolAsset2) {
-                logger.warn(`Skip add liquidity ${pairName}: one of the pool assets not found`);
+                logger.warn(`Skip add liquidity ${pairName}: one of the pool assets not found.`);
                 return null;
             }
 
@@ -416,7 +422,6 @@ async function addLiquidity(wallet, address, pairName, liquidityNumber) {
             let adjustedToken1 = token1Amount;
             let adjustedZIG = zigAmount;
 
-            // Penyesuaian jumlah untuk menjaga rasio pool
             if (token1Amount / zigAmount > ratio) {
                 adjustedToken1 = zigAmount * ratio;
             } else {
@@ -438,7 +443,7 @@ async function addLiquidity(wallet, address, pairName, liquidityNumber) {
                         { amount: microAmountToken1.toString(), info: { native_token: { denom: pair.token1 } } },
                         { amount: microAmountZIG.toString(), info: { native_token: { denom: 'uzig' } } },
                     ],
-                    slippage_tolerance: "0.5",
+                    slippage_tolerance: "0.5", // Slippage tolerance untuk liquidity add, bisa disesuaikan
                 },
             };
             const funds = [
@@ -446,7 +451,6 @@ async function addLiquidity(wallet, address, pairName, liquidityNumber) {
                 { denom: 'uzig', amount: microAmountZIG.toString() }
             ];
 
-            // Client baru diambil setiap kali
             const client = await SigningCosmWasmClient.connectWithSigner(RPC_URL, wallet, { gasPrice: GAS_PRICE });
             const result = await client.execute(address, pair.contract, msg, 'auto', `Adding ${pairName} Liquidity`, funds);
             logger.success(`Liquidity added for ${pairName}! Tx: ${EXPLORER_URL}${result.transactionHash}`);
@@ -457,12 +461,12 @@ async function addLiquidity(wallet, address, pairName, liquidityNumber) {
             if (error.message.includes('account sequence mismatch') || error.message.includes('transaction already in mempool')) {
                 retries++;
                 if (retries < MAX_RETRIES) {
-                    logger.warn(`Retrying add liquidity for ${pairName} due to account sequence mismatch/mempool issue (attempt ${retries}/${MAX_RETRIES})...`);
-                    await new Promise(resolve => setTimeout(resolve, 5000 + retries * 2000)); // Penundaan lebih lama
-                    continue; // Coba lagi
+                    logger.warn(`Retrying add liquidity for ${pairName} due to ${error.message.includes('account sequence mismatch') ? 'account sequence mismatch' : 'mempool issue'} (attempt ${retries}/${MAX_RETRIES})...`);
+                    await new Promise(resolve => setTimeout(resolve, 5000 + retries * 2000));
+                    continue;
                 }
             }
-            return null; // Keluar setelah max retries atau error lainnya
+            return null;
         }
     }
     logger.error(`Add liquidity for ${pairName} failed after ${MAX_RETRIES} retries.`);
@@ -486,14 +490,14 @@ async function executeTransactionCycle(
     liquidityMaxDelay
 ) {
     logger.step(`--- Transaction For Wallet ${walletNumber} ---`);
-    await printWalletInfo(address); // Tidak perlu rpcClient di sini
+    await printWalletInfo(address);
 
     let swapNo = 1;
     for (let i = 0; i < numSwaps; i++) {
         const idx = i % SWAP_SEQUENCE.length;
         const { from, to, pair } = SWAP_SEQUENCE[idx];
         const swapAmount = getRandomSwapAmount();
-        await performSwap(wallet, address, swapAmount, pair, swapNo++, from, to); // rpcClient tidak diperlukan
+        await performSwap(wallet, address, swapAmount, pair, swapNo++, from, to);
         const delay = getRandomDelay(swapMinDelay, swapMaxDelay);
         logger.info(`Waiting for ${delay} seconds before next swap...`);
         await new Promise(resolve => setTimeout(resolve, delay * 1000));
@@ -502,7 +506,7 @@ async function executeTransactionCycle(
     let liquidityNo = 1;
     for (let i = 0; i < numAddLiquidity; i++) {
         const pairName = LIQUIDITY_PAIRS[i % LIQUIDITY_PAIRS.length];
-        await addLiquidity(wallet, address, pairName, liquidityNo++); // rpcClient tidak diperlukan
+        await addLiquidity(wallet, address, pairName, liquidityNo++);
         const liquidityDelay = getRandomDelay(liquidityMinDelay, liquidityMaxDelay);
         logger.info(`Waiting for ${liquidityDelay} seconds before next liquidity add...`);
         await new Promise(resolve => setTimeout(resolve, liquidityDelay * 1000));
@@ -524,7 +528,7 @@ async function executeAllWallets(
 ) {
     for (let walletIndex = 0; walletIndex < keys.length; walletIndex++) {
         const key = keys[walletIndex];
-        let rpcClientInstance = null; // Ini adalah instance Tendermint34Client
+        let rpcClientInstance = null;
 
         try {
             if (useProxy && proxies.length > 0) {
@@ -550,7 +554,6 @@ async function executeAllWallets(
                 swapMaxDelay,
                 liquidityMinDelay,
                 liquidityMaxDelay
-                // rpcClientInstance tidak lagi perlu dilewatkan secara eksplisit ke performSwap/addLiquidity
             );
             logger.success(`All transactions completed for wallet ${walletIndex + 1}!`);
             if (walletIndex < keys.length - 1) {
@@ -560,7 +563,7 @@ async function executeAllWallets(
             logger.error(`Error processing wallet ${walletIndex + 1}: ${error.message}`);
         } finally {
             if (rpcClientInstance) {
-                rpcClientInstance.disconnect(); // Pastikan klien Tendermint RPC diputus
+                rpcClientInstance.disconnect();
             }
         }
     }
@@ -583,7 +586,7 @@ async function startDailyCountdown(
         const endTime = startTime + TWENTY_FOUR_HOURS;
         while (Date.now() < endTime) {
             const remaining = endTime - Date.now();
-            if (remaining <= 0) break; // Keluar jika waktu sudah habis
+            if (remaining <= 0) break;
             const hours = Math.floor(remaining / (1000 * 60 * 60));
             const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
             const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
@@ -663,8 +666,8 @@ async function main() {
         }
         logger.error(`Invalid input. Please enter a number greater than or equal to ${swapMinDelay}.`);
     }
-    let liquidityMinDelay = swapMinDelay; // Default ke delay swap
-    let liquidityMaxDelay = swapMaxDelay; // Default ke delay swap
+    let liquidityMinDelay = swapMinDelay;
+    let liquidityMaxDelay = swapMaxDelay;
 
     let useProxy = false;
     let proxies = [];
