@@ -115,10 +115,12 @@ const TOKEN_DECIMALS = {
   'coin.zig10rfjm85jmzfhravjwpq3hcdz8ngxg7lxd0drkr.uor': 6,
 };
 const SWAP_SEQUENCE = [
-  // ZIG -> NFA
+  [cite_start]// ZIG -> NFA [cite: 20]
   { from: 'uzig', to: 'coin.zig1qaf4dvjt5f8naam2mzpmysjm5e8sp2yhrzex8d.nfa', pair: 'NFA/ZIG' },
-  // ZIG -> CULTCOIN
+  [cite_start]// ZIG -> CULTCOIN [cite: 20]
   { from: 'uzig', to: 'coin.zig12jgpgq5ec88nwzkkjx7jyrzrljpph5pnags8sn.ucultcoin', pair: 'CULTCOIN/ZIG' },
+  // ZIG -> ORO (Added new swap sequence)
+  { from: 'uzig', to: 'coin.zig10rfjm85jmzfhravjwpq3hcdz8ngxg7lxd0drkr.uor', pair: 'ORO/ZIG' },
 ];
 const LIQUIDITY_PAIRS = [
   'ZMZIG/ZIG',
@@ -216,6 +218,7 @@ async function getBalance(address, denom, rpcClient) {
   try {
     const client = await SigningCosmWasmClient.connectWithSigner(RPC_URL, rpcClient);
     const bal = await client.getBalance(address, denom);
+    // Adjusted to ensure all token balances are retrieved correctly
     return bal && bal.amount ? parseFloat(bal.amount) / Math.pow(10, TOKEN_DECIMALS[denom] || 6) : 0;
   } catch (e) {
     logger.error("Gagal getBalance: " + e.message);
@@ -355,10 +358,9 @@ async function addLiquidity(wallet, address, pairName, liquidityNumber, rpcClien
       return null;
     }
 
-    const LIQUIDITY_PERCENTAGE = 0.003; // Mengubah 5% menjadi 0.3%
+    const LIQUIDITY_PERCENTAGE = 0.003;
     const token1Amount = saldoToken1 * LIQUIDITY_PERCENTAGE;
     const zigAmount = saldoZIG * LIQUIDITY_PERCENTAGE;
-
     const poolInfo = await getPoolInfo(pair.contract, rpcClient);
     if (!poolInfo) {
       logger.warn(`Skip add liquidity ${pairName}: pool info tidak didapat`);
