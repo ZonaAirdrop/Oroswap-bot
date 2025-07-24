@@ -83,7 +83,6 @@ const TOKEN_SYMBOLS = {
   'coin.zig1zpnw5dtzzttmgtdjgtywt08wnlyyskpuupy3cfw8mytlslx54j9sgz6w4n.zmzig': 'ZMZIG',
   'coin.zig1qaf4dvjt5f8naam2mzpmysjm5e8sp2yhrzex8d.nfa': 'NFA',
   'coin.zig12jgpgq5ec88nwzkkjx7jyrzrljpph5pnags8sn.ucultcoin': 'CULTCOIN',
-  'coin.zig10rfjm85jmzfhravjwpq3hcdz8ngxg7lxd0drkr.uor': 'ORO',
 };
 const TOKEN_PAIRS = {
   'ZMZIG/ZIG': {
@@ -100,11 +99,6 @@ const TOKEN_PAIRS = {
     contract: 'zig1j55nw46crxkm03fjdf3cqx3py5cd32jny685x9c3gftfdt2xlvjs63znce',
     token1: 'coin.zig12jgpgq5ec88nwzkkjx7jyrzrljpph5pnags8sn.ucultcoin',
     token2: 'uzig'
-  },
-  'ORO/ZIG': {
-    contract: 'zig15jqg0hmp9n06q0as7uk3x9xkwr9k3r7yh4ww2uc0hek8zlryrgmsamk4qg',
-    token1: 'coin.zig10rfjm85jmzfhravjwpq3hcdz8ngxg7lxd0drkr.uor',
-    token2: 'uzig'
   }
 };
 const TOKEN_DECIMALS = {
@@ -112,7 +106,6 @@ const TOKEN_DECIMALS = {
   'coin.zig1zpnw5dtzzttmgtdjgtywt08wnlyyskpuupy3cfw8mytlslx54j9sgz6w4n.zmzig': 6,
   'coin.zig1qaf4dvjt5f8naam2mzpmysjm5e8sp2yhrzex8d.nfa': 6,
   'coin.zig12jgpgq5ec88nwzkkjx7jyrzrljpph5pnags8sn.ucultcoin': 6,
-  'coin.zig10rfjm85jmzfhravjwpq3hcdz8ngxg7lxd0drkr.uor': 6,
 };
 const SWAP_SEQUENCE = [
   // ZIG -> NFA
@@ -124,7 +117,6 @@ const LIQUIDITY_PAIRS = [
   'ZMZIG/ZIG',
   'NFA/ZIG',
   'CULTCOIN/ZIG',
-  'ORO/ZIG'
 ];
 
 function getRandomMaxSpread() {
