@@ -167,8 +167,8 @@ async function getAccountAddress(wallet) {
 }
 
 function getRandomSwapAmount() {
-  const min = 0.01;
-  const max = 0.012;
+  const min = 0.02;
+  const max = 0.021;
   return Math.random() * (max - min) + min;
 }
 
