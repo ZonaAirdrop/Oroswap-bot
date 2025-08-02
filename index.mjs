@@ -74,7 +74,7 @@ const display_welcome_screen = async () => {
     console.log("  └─────────────────────────────────┘\n");
     await new Promise(resolve => setTimeout(resolve, 1000));
 };
-const RPC_URL = 'https://testnet-rpc.zigchain.com';
+const RPC_URL = 'https://rpc.zigscan.net/';
 const API_URL = 'https://testnet-api.oroswap.org/api/';
 const EXPLORER_URL = 'https://zigscan.org/tx/';
 const GAS_PRICE = GasPrice.fromString('0.03uzig');
